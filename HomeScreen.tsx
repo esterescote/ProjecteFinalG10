@@ -1,49 +1,59 @@
-import { useEffect, useState } from "react";
-import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity } from "react-native";
-import axios from "axios";
+import React from "react";
+import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
-const API_KEY = "4d3cb710ab798774158802e72c50dfa2"; 
-const URL = `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=ca-ES`;
-
+const challenges = [
+  { id: "1", title: "New Challenges", description: "Start new challenges..." },
+  { id: "2", title: "My Challenge", description: "Check the status of your..." },
+  { id: "3", title: "My Progress", description: "Your progress, points..." },
+];
 
 export default function HomeScreen() {
-  const [movies, setMovies] = useState([]);
   const navigation = useNavigation();
-
-  useEffect(() => {
-    axios.get(URL)
-      .then(response => setMovies(response.data.results))
-      .catch(error => console.error("Error carregant les pel·lícules", error));
-  }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🎬 Pel·lícules Populars</Text>
+      {/* Barra superior */}
+      <View style={styles.header}>
+        <Text style={styles.username}>Username</Text>
+       
+      </View>
+
+      {/* Missatge de benvinguda */}
+      <Text style={styles.welcomeText}>Nice to see you here again!</Text>
+
+      {/* Llista de targetes */}
       <FlatList
-        data={movies}
-        keyExtractor={item => item.id.toString()}
+        data={challenges}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.movieContainer} 
-            onPress={() => navigation.navigate("Details", { movie: item })}
-          >
-            <Image 
-              source={{ uri: `https://image.tmdb.org/t/p/w500${item.poster_path}` }} 
-              style={styles.poster}
-            />
-            <Text style={styles.movieTitle}>{item.title}</Text>
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Details", { title: item.title })}>
+            <Image source={item.image} style={styles.cardImage} />
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.cardDescription}>{item.description}</Text>
           </TouchableOpacity>
         )}
       />
+
+      {/* Barra inferior de navegació */}
+      <View style={styles.navBar}>
+        <Text>🏠</Text>
+        <Text>🎬</Text>
+        <Text>📊</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 10, backgroundColor: "#fff", flex: 1 },
-  title: { fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 10 },
-  movieContainer: { alignItems: "center", marginBottom: 20 },
-  poster: { width: 150, height: 225, borderRadius: 10 },
-  movieTitle: { marginTop: 5, fontSize: 16, fontWeight: "bold" }
+  container: { flex: 1, backgroundColor: "#2E1F1F", padding: 20 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  username: { color: "white", fontSize: 18 },
+  profilePic: { width: 40, height: 40, borderRadius: 20 },
+  welcomeText: { color: "white", fontSize: 24, marginVertical: 20 },
+  card: { backgroundColor: "#3E2E2E", borderRadius: 10, marginBottom: 15, padding: 15 },
+  cardImage: { width: "100%", height: 100, borderRadius: 8 },
+  cardTitle: { color: "white", fontSize: 18, marginTop: 10 },
+  cardDescription: { color: "#B0A5A5", fontSize: 14 },
+  navBar: { flexDirection: "row", justifyContent: "space-around", padding: 15, backgroundColor: "#1F1A1A" },
 });
