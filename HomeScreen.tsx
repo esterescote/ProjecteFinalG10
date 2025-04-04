@@ -27,13 +27,16 @@ export default function HomeScreen() {
         data={challenges}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Details", { title: item.title })}>
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Challenges", { title: item.title })}>
             <Image source={item.image} style={styles.cardImage} />
             <Text style={styles.cardTitle}>{item.title}</Text>
             <Text style={styles.cardDescription}>{item.description}</Text>
           </TouchableOpacity>
+          
         )}
       />
+
+      
 
       {/* Barra inferior de navegació */}
       <View style={styles.navBar}>
