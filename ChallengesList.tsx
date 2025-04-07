@@ -2,10 +2,10 @@ import React from "react";
 import { View, Text, FlatList, ImageBackground, StyleSheet, TouchableOpacity } from "react-native";
 
 const challenges = [
-  { id: "1", title: "Marvel marathon", image: require("../assets/marvel.jpg") },
-  { id: "2", title: "The Oscar Winners Challenge", image: require("../assets/oscars.jpg") },
-  { id: "3", title: "Lord of the Rings & The Hobbit marathon", image: require("../assets/lotr.jpg") },
-  { id: "4", title: "The 50 Disney Classics", image: require("../assets/disney.jpg") },
+  { id: "1", title: "Marvel marathon", image: require("../assets/Marvelmarathon.png") },
+  { id: "2", title: "The Oscar Winners Challenge", image: require("../assets/oscars.png") },
+  { id: "3", title: "Lord of the Rings & The Hobbit marathon", image: require("../assets/lotr.png") },
+  { id: "4", title: "The 50 Disney Classics", image: require("../assets/50disney.png") },
 ];
 
 export default function ChallengesList({ route }) {
