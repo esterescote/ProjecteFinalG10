@@ -1,5 +1,11 @@
 {
-  "compilerOptions": {},
+  "compilerOptions": {
+    "jsx": "react-native",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node"
+  },
   "jsx": "react-native",
+  "baseUrl": "./src",
   "extends": "expo/tsconfig.base"
 }
