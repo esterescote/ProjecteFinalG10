@@ -1,32 +1,53 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { supabase } from '../lib/supabase'; // Importa el client de supabase
+import { supabase } from '../lib/supabase';
 
-const login = ({ navigation }: any) => {
-  // State per als camps del formulari
+const Login = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
 
-  // Funció per fer login amb Supabase
   const handleLogin = async () => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-      setError(error.message); // Mostra l'error si no es pot autenticar
+      setError(error.message);
     } else {
-      // Si tot va bé, redirigeix a la pàgina d'inici
-      navigation.replace('Home'); // Això redirigeix l'usuari sense poder tornar a login
+      navigation.replace('Home');
+    }
+  };
+
+  const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      setError('Les contrasenyes no coincideixen.');
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username },
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      navigation.replace('Home');
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Inicia Sessió</Text>
-      
+      <Text style={styles.title}>{isRegistering ? 'Registra\'t' : 'Inicia Sessió'}</Text>
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <TextInput
@@ -44,12 +65,35 @@ const login = ({ navigation }: any) => {
         secureTextEntry
       />
 
-      <Button title="Iniciar Sessió" onPress={handleLogin} />
+      {isRegistering && (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="Repeteix la contrasenya"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Nom d'usuari"
+            value={username}
+            onChangeText={setUsername}
+          />
+        </>
+      )}
 
-      <Button 
-        title="No tens un compte? Registra't" 
-        onPress={() => navigation.replace('Register')} // Pantalla de registre (si la tens)
-      />
+      {isRegistering ? (
+        <>
+          <Button title="Registrar-se" onPress={handleRegister} />
+          <Button title="Ja tens un compte? Inicia sessió" onPress={() => setIsRegistering(false)} />
+        </>
+      ) : (
+        <>
+          <Button title="Iniciar Sessió" onPress={handleLogin} />
+          <Button title="No tens un compte? Registra't" onPress={() => setIsRegistering(true)} />
+        </>
+      )}
     </View>
   );
 };
@@ -82,4 +126,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default login;
+export default Login;
