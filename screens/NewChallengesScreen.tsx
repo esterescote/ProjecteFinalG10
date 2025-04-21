@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { useRouter } from 'expo-router';
 
 type Challenge = {
   id: string;
@@ -15,53 +16,54 @@ const NewChallengesScreen: React.FC = () => {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    fetchChallenges();
+    loadUserAndChallenges();
   }, []);
 
-  const fetchChallenges = async () => {
+  const loadUserAndChallenges = async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return;
+    setUserId(user.id);
+    fetchChallenges(user.id);
+  };
+
+  const fetchChallenges = async (userId: string) => {
     const { data, error } = await supabase.from('challenges').select('*');
     if (error) {
       console.error('Error loading challenges:', error.message);
     } else {
-      const challengesWithAddedStatus = data.map((challenge: any) => ({
+      const baseChallenges = data.map((challenge: any) => ({
         ...challenge,
-        added: false, // Inicialitzem l'estat `added` com a fals per defecte
+        added: false,
       }));
-      setChallenges(challengesWithAddedStatus);
-      loadAddedChallenges(challengesWithAddedStatus); // Carregar els reptes afegits prèviament des de AsyncStorage
+
+      const finalChallenges = await applyStoredChallengeStatus(baseChallenges, userId);
+      setChallenges(finalChallenges);
     }
   };
 
-  // Carregar l'estat de si un repte ha estat afegit des de AsyncStorage
-  const loadAddedChallenges = async (challenges: Challenge[]) => {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) return;
-
-    for (const challenge of challenges) {
-      const addedStatus = await AsyncStorage.getItem(`${user.id}_${challenge.id}`);
-      if (addedStatus === 'true') {
-        setChallenges(prevChallenges =>
-          prevChallenges.map(c =>
-            c.id === challenge.id ? { ...c, added: true } : c
-          )
-        );
-      }
-    }
+  const applyStoredChallengeStatus = async (challenges: Challenge[], userId: string) => {
+    const updated = await Promise.all(
+      challenges.map(async (challenge) => {
+        const status = await AsyncStorage.getItem(`${userId}_${challenge.id}`);
+        return {
+          ...challenge,
+          added: status === 'true',
+        };
+      })
+    );
+    return updated;
   };
 
   const handleAddChallenge = async (challengeId: string) => {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      setMessage('No s\'ha pogut obtenir l\'usuari actual.');
-      setModalVisible(true);
-      return;
-    }
+    if (!userId) return;
 
-    const { error: insertError } = await supabase.from('user_challenges').insert([
+    const { error } = await supabase.from('user_challenges').insert([
       {
-        user_id: user.id,
+        user_id: userId,
         challenge_id: challengeId,
         status: 'pending',
         start_date: new Date().toISOString(),
@@ -69,27 +71,47 @@ const NewChallengesScreen: React.FC = () => {
       },
     ]);
 
-    if (insertError) {
-      setMessage(`Error: ${insertError.message}`);
+    if (error) {
+      setMessage(`Error: ${error.message}`);
     } else {
+      await AsyncStorage.setItem(`${userId}_${challengeId}`, 'true');
+      updateChallengeState(challengeId, true);
       setMessage('Challenge added correctly!');
-      
-      // Actualitzar l'estat i guardar-lo en AsyncStorage per aquest usuari
-      setChallenges(prevChallenges =>
-        prevChallenges.map(challenge =>
-          challenge.id === challengeId ? { ...challenge, added: true } : challenge
-        )
-      );
-      
-      // Guardar l'estat del repte afegit per aquest usuari específic
-      await AsyncStorage.setItem(`${user.id}_${challengeId}`, 'true');
     }
 
     setModalVisible(true);
   };
 
+  const handleRemoveChallenge = async (challengeId: string) => {
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from('user_challenges')
+      .delete()
+      .eq('user_id', userId)
+      .eq('challenge_id', challengeId);
+
+    if (error) {
+      setMessage(`Error: ${error.message}`);
+    } else {
+      await AsyncStorage.removeItem(`${userId}_${challengeId}`);
+      updateChallengeState(challengeId, false);
+      setMessage('Challenge removed.');
+    }
+
+    setModalVisible(true);
+  };
+
+  const updateChallengeState = (challengeId: string, added: boolean) => {
+    setChallenges((prev) =>
+      prev.map((challenge) =>
+        challenge.id === challengeId ? { ...challenge, added } : challenge
+      )
+    );
+  };
+
   const handleCloseModal = () => {
-    setModalVisible(false); // Tancar el modal quan es fa clic a "OK"
+    setModalVisible(false);
   };
 
   const renderItem = ({ item }: { item: Challenge }) => {
@@ -104,8 +126,11 @@ const NewChallengesScreen: React.FC = () => {
             <Text style={styles.buttonText}>Visualize</Text>
           </TouchableOpacity>
 
-          {/* Afegim la condició per amagar el botó Add si el repte ja ha estat afegit */}
-          {!item.added && (
+          {item.added ? (
+            <TouchableOpacity style={[styles.button, styles.removeButton]} onPress={() => handleRemoveChallenge(item.id)}>
+              <Text style={styles.buttonText}>Remove</Text>
+            </TouchableOpacity>
+          ) : (
             <TouchableOpacity style={styles.button} onPress={() => handleAddChallenge(item.id)}>
               <Text style={styles.buttonText}>Add</Text>
             </TouchableOpacity>
@@ -123,9 +148,9 @@ const NewChallengesScreen: React.FC = () => {
         data={challenges}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      {/* Modal per mostrar el missatge */}
       <Modal
         transparent={true}
         animationType="fade"
@@ -204,12 +229,13 @@ const styles = StyleSheet.create({
     flex: 0.48,
     alignItems: 'center',
   },
+  removeButton: {
+    backgroundColor: '#555555',
+  },
   buttonText: {
     color: 'white',
     fontSize: 16,
   },
-
-  // Estils per al modal
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
@@ -236,6 +262,22 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: 'white',
     fontSize: 16,
+  },
+  menu: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#1e1e1e',
+    paddingVertical: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  menuText: {
+    color: 'white',
+    fontSize: 24,
   },
 });
 

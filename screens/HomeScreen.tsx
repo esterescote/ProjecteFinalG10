@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { supabase } from '../lib/supabase'; // ajusta la ruta segons on tinguis el client
+import { supabase } from '../lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
 
 type RootStackParamList = {
   Home: undefined;
   NewChallenges: undefined;
   MyChallenges: undefined;
   Progress: undefined;
+  Profile: undefined;
 };
 
 type HomeScreenProps = {
@@ -22,7 +24,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const { data, error } = await supabase.auth.getUser();
       if (data?.user?.email) {
         setEmail(data.user.email);
-      
       } else if (error) {
         console.error('Error getting user:', error.message);
       }
@@ -32,54 +33,156 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.greeting}>
-        Nice to see you here again{email ? `, ${email}` : ''}!
-      </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.username}>{email ? `${email}` : ''}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+            <Image
+              source={{ uri: 'https://i.imgur.com/4YQF2kR.png' }}
+              style={styles.avatar}
+            />
+          </TouchableOpacity>
+        </View>
 
-      <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')} style={styles.card}>
-        <Text style={styles.cardText}>Start taking challenges or create your own</Text>
-      </TouchableOpacity>
+        <Text style={styles.welcome}>Nice to see you here again!</Text>
 
-      <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')} style={styles.card}>
-        <Text style={styles.cardText}>Check the state of your current challenge</Text>
-      </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+        >
 
-      <TouchableOpacity onPress={() => navigation.navigate('Progress')} style={styles.card}>
-        <Text style={styles.cardText}>Your progress, points, challenges completed...</Text>
-      </TouchableOpacity>
-    </View>
+          {/* Secció 1 */}
+          <Text style={styles.sectionTitle}>New Challenges</Text>
+          <View style={styles.separator} />
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('NewChallenges')}>
+            <Image
+              source={{ uri: 'https://cdn.hobbyconsolas.com/sites/navi.axelspringer.es/public/media/image/2016/09/pulp-fiction.jpg?tf=3840x' }}
+              style={styles.cardImage}
+            />
+            <Text style={styles.cardText}>Start existing challenges or create your own</Text>
+          </TouchableOpacity>
+
+          {/* Secció 2 */}
+          <Text style={styles.sectionTitle}>My Challenge</Text>
+          <View style={styles.separator} />
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('MyChallenges')}>
+            <Image
+              source={{ uri: 'https://www.eyeforfilm.co.uk/images/newsite/the-shawshank-redemption_600.webp' }}
+              style={styles.cardImage}
+            />
+            <Text style={styles.cardText}>Check the status of your current challenge</Text>
+          </TouchableOpacity>
+
+          {/* Secció 3 */}
+          <Text style={styles.sectionTitle}>My Progress</Text>
+          <View style={styles.separator} />
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Progress')}>
+            <Image
+              source={{ uri: 'https://estaticos-cdn.prensaiberica.es/clip/0877e41a-8bb1-460f-81fc-61ce2e292193_source-aspect-ratio_default_0.jpg' }}
+              style={styles.cardImage}
+            />
+            <Text style={styles.cardText}>Your progress, points, challenges completed, movies watched...</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
+      {/* Menú inferior FIX i sense marges */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity>
+          <Ionicons name="home" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="calendar" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="add-circle" size={30} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="trophy" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="person" size={26} color="white" />
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#3a2f2f',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
-    padding: 20,
-    paddingTop: 60,
+    paddingTop: 50,
+    paddingHorizontal: 20,
   },
-  greeting: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  username: {
+    color: '#fff',
+    fontSize: 14,
+    marginRight: 10,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+  },
+  welcome: {
     fontSize: 24,
     color: 'white',
-    marginBottom: 20,
     fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  scroll: {
+    paddingBottom: 120,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 5,
+  },
+  separator: {
+    borderBottomColor: '#fff',
+    borderBottomWidth: 1,
+    marginBottom: 10,
   },
   card: {
-    marginBottom: 20,
-    height: 120,
-    borderRadius: 10,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#800000', // fons per defecte si no tens imatge
-    justifyContent: 'flex-end',
+    marginBottom: 20,
+  },
+  cardImage: {
+    width: '100%',
+    height: 100,
+    resizeMode: 'cover',
   },
   cardText: {
-    color: 'white',
-    fontSize: 16,
+    color: '#fff',
     padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    fontSize: 14,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#2b2323',
+    paddingVertical: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
   },
 });
 

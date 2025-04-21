@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 const Login = ({ navigation }: any) => {
@@ -46,20 +46,29 @@ const Login = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{isRegistering ? 'Registra\'t' : 'Inicia Sessió'}</Text>
+      <Text style={styles.title}>
+        {isRegistering ? "Not registered yet?" : "Are you already registered?"}
+      </Text>
+      <Text style={styles.subtitle}>
+        {isRegistering
+          ? "Click and start enjoying!"
+          : "Log in and continue enjoying your film challenges"}
+      </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <TextInput
         style={styles.input}
-        placeholder="Correu Electrònic"
+        placeholder="Email Address or Username"
+        placeholderTextColor="#ccc"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
       />
       <TextInput
         style={styles.input}
-        placeholder="Contrasenya"
+        placeholder="Password"
+        placeholderTextColor="#ccc"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -69,31 +78,37 @@ const Login = ({ navigation }: any) => {
         <>
           <TextInput
             style={styles.input}
-            placeholder="Repeteix la contrasenya"
+            placeholder="Repeat Password"
+            placeholderTextColor="#ccc"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
           />
           <TextInput
             style={styles.input}
-            placeholder="Nom d'usuari"
+            placeholder="Username"
+            placeholderTextColor="#ccc"
             value={username}
             onChangeText={setUsername}
           />
         </>
       )}
 
-      {isRegistering ? (
-        <>
-          <Button title="Registrar-se" onPress={handleRegister} />
-          <Button title="Ja tens un compte? Inicia sessió" onPress={() => setIsRegistering(false)} />
-        </>
-      ) : (
-        <>
-          <Button title="Iniciar Sessió" onPress={handleLogin} />
-          <Button title="No tens un compte? Registra't" onPress={() => setIsRegistering(true)} />
-        </>
+      <TouchableOpacity style={styles.button} onPress={isRegistering ? handleRegister : handleLogin}>
+        <Text style={styles.buttonText}>{isRegistering ? 'REGISTER' : 'LOG IN'}</Text>
+      </TouchableOpacity>
+
+      {!isRegistering && (
+        <Text style={styles.link}>Forgotten password?</Text>
       )}
+
+      <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)}>
+        <Text style={styles.link}>
+          {isRegistering
+            ? 'Already have an account? Log in'
+            : "Not registered yet? Click and start enjoying!"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -101,28 +116,62 @@ const Login = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#3a2f2f', // fons marró fosc
     justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#f7f7f7',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#ffffff',
     textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#f0e6e6',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   input: {
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
+    width: '100%',
+    backgroundColor: 'transparent',
+    borderColor: '#ffffff',
+    borderWidth: 1.2,
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    color: '#ffffff',
     marginBottom: 10,
-    paddingLeft: 10,
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginTop: 15,
+    width: '100%',
+  },
+  buttonText: {
+    color: '#000000',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  link: {
+    color: '#f0e6e6',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
+    textDecorationLine: 'underline',
   },
   error: {
     color: 'red',
+    fontSize: 14,
     textAlign: 'center',
-    marginBottom: 10,
+    marginTop: 10,
   },
 });
 
