@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Image, ActivityIndicator, FlatList, TouchableOp
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
 
-// Constants per a la API de TMDB
 const TMDB_API_KEY = '4d3cb710ab798774158802e72c50dfa2';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
@@ -13,8 +12,10 @@ type Challenge = {
   name: string;
   description: string;
   image: string;
-  tmdb_movie_ids?: number[];
+  search_keywords?: string;
+  number_films?: number; // <- afegeix aquesta línia
 };
+
 
 type Movie = {
   id: number;
@@ -29,6 +30,7 @@ const ChallengeDetailsScreen: React.FC = () => {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMovies, setLoadingMovies] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -53,9 +55,9 @@ const ChallengeDetailsScreen: React.FC = () => {
 
       if (data.tmdb_movie_ids && data.tmdb_movie_ids.length > 0) {
         fetchMoviesFromTMDB(data.tmdb_movie_ids);
-      } else {
-        searchMoviesByChallengeName(data.name);
-      }
+      } else if (data.search_keywords) {
+        searchMoviesByKeywords(data.search_keywords, data.number_films);
+      } 
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -64,6 +66,7 @@ const ChallengeDetailsScreen: React.FC = () => {
   };
 
   const fetchMoviesFromTMDB = async (movieIds: number[]) => {
+    setLoadingMovies(true);
     try {
       const moviePromises = movieIds.map(id =>
         fetch(`${TMDB_BASE_URL}/movie/${id}?api_key=${TMDB_API_KEY}&language=es-ES`)
@@ -74,23 +77,41 @@ const ChallengeDetailsScreen: React.FC = () => {
       setMovies(moviesData);
     } catch (error) {
       console.error('Error fetching movies:', error);
+    } finally {
+      setLoadingMovies(false);
     }
   };
 
-  const searchMoviesByChallengeName = async (challengeName: string) => {
+  const searchMoviesByKeywords = async (keywordsString: string, numberFilms: number = 10) => {
+    setLoadingMovies(true);
     try {
-      const response = await fetch(
-        `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&language=es-ES&query=${encodeURIComponent(challengeName)}&page=1`
+      const keywords = keywordsString.split(',').map(k => k.trim()).filter(Boolean);
+  
+      // Afegeix 'sort_by' a la consulta per ordenar per popularitat
+      const searchPromises = keywords.map(keyword =>
+        fetch(
+          `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&language=es-ES&query=${encodeURIComponent(keyword)}&sort_by=popularity.desc&page=1`
+        ).then(res => res.json())
       );
-      const data = await response.json();
-      if (data.results && data.results.length > 0) {
-        setMovies(data.results.slice(0, 5)); // Només mostra els primers 5
-      }
+  
+      const results = await Promise.all(searchPromises);
+  
+      // Fusiona els resultats i ordena per popularitat
+      const allMovies = results
+        .flatMap(result => result.results || [])
+        .filter((movie, index, self) =>
+          self.findIndex(m => m.id === movie.id) === index
+        )
+        .sort((a, b) => b.popularity - a.popularity); // Ordena per popularitat de major a menor
+  
+      setMovies(allMovies.slice(0, numberFilms)); // Usa directament el paràmetre
     } catch (error) {
-      console.error('Error searching movies:', error);
+      console.error('Error searching movies by keywords:', error);
+    } finally {
+      setLoadingMovies(false);
     }
   };
-
+  
   const renderMovieItem = ({ item }: { item: Movie }) => (
     <TouchableOpacity style={styles.movieCard}>
       <Image
@@ -132,9 +153,14 @@ const ChallengeDetailsScreen: React.FC = () => {
       <Image source={{ uri: challenge.image }} style={styles.image} />
       <Text style={styles.description}>{challenge.description}</Text>
 
-      <Text style={styles.sectionTitle}>Películas para completar este reto</Text>
+      <Text style={styles.sectionTitle}>Pel·lícules per completar aquest repte</Text>
 
-      {movies.length > 0 ? (
+      {loadingMovies ? (
+        <View style={styles.loadingMoviesContainer}>
+          <ActivityIndicator size="small" color="#888" />
+          <Text style={styles.loadingText}>Carregant pel·lícules...</Text>
+        </View>
+      ) : movies.length > 0 ? (
         <FlatList
           data={movies}
           renderItem={renderMovieItem}
@@ -143,7 +169,7 @@ const ChallengeDetailsScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         />
       ) : (
-        <Text style={styles.noMoviesText}>No hay películas disponibles para este reto</Text>
+        <Text style={styles.noMoviesText}>No hi ha pel·lícules disponibles per aquest repte</Text>
       )}
     </View>
   );
@@ -221,6 +247,17 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'white',
     fontSize: 18,
+  },
+  loadingMoviesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 20,
+  },
+  loadingText: {
+    color: '#888',
+    fontSize: 16,
+    marginLeft: 10,
   },
 });
 
