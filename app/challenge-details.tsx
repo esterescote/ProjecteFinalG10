@@ -13,9 +13,9 @@ type Challenge = {
   description: string;
   image: string;
   search_keywords?: string;
-  number_films?: number; // <- afegeix aquesta línia
+  number_films?: number;
+  tmdb_movie_ids?: number[];
 };
-
 
 type Movie = {
   id: number;
@@ -29,12 +29,14 @@ const ChallengeDetailsScreen: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [watchedMovies, setWatchedMovies] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMovies, setLoadingMovies] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchChallengeDetails(id);
+      fetchWatchedMovies(id);
     }
   }, [id]);
 
@@ -65,12 +67,57 @@ const ChallengeDetailsScreen: React.FC = () => {
     }
   };
 
+  const fetchWatchedMovies = async (challengeId: string) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('watched_movies')
+      .select('movie_id')
+      .eq('user_id', user.id)
+      .eq('challenge_id', challengeId);
+
+    if (!error && data) {
+      setWatchedMovies(data.map((entry) => entry.movie_id));
+    }
+  };
+
+  const toggleWatched = async (movieId: number) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !id) return;
+
+    const isWatched = watchedMovies.includes(movieId);
+
+    if (isWatched) {
+      await supabase
+        .from('watched_movies')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('challenge_id', id)
+        .eq('movie_id', movieId);
+
+      setWatchedMovies((prev) => prev.filter((mid) => mid !== movieId));
+    } else {
+      await supabase
+        .from('watched_movies')
+        .insert({ user_id: user.id, challenge_id: id, movie_id: movieId });
+
+      setWatchedMovies((prev) => [...prev, movieId]);
+    }
+  };
+
   const fetchMoviesFromTMDB = async (movieIds: number[]) => {
     setLoadingMovies(true);
     try {
-      const moviePromises = movieIds.map(id =>
-        fetch(`${TMDB_BASE_URL}/movie/${id}?api_key=${TMDB_API_KEY}&language=es-ES`)
-          .then(response => response.json())
+      const moviePromises = movieIds.map((id) =>
+        fetch(`${TMDB_BASE_URL}/movie/${id}?api_key=${TMDB_API_KEY}&language=es-ES`).then((response) =>
+          response.json()
+        )
       );
 
       const moviesData = await Promise.all(moviePromises);
@@ -85,51 +132,57 @@ const ChallengeDetailsScreen: React.FC = () => {
   const searchMoviesByKeywords = async (keywordsString: string, numberFilms: number = 10) => {
     setLoadingMovies(true);
     try {
-      const keywords = keywordsString.split(',').map(k => k.trim()).filter(Boolean);
-  
-      // Afegeix 'sort_by' a la consulta per ordenar per popularitat
-      const searchPromises = keywords.map(keyword =>
+      const keywords = keywordsString.split(',').map((k) => k.trim()).filter(Boolean);
+
+      const searchPromises = keywords.map((keyword) =>
         fetch(
-          `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&language=es-ES&query=${encodeURIComponent(keyword)}&sort_by=popularity.desc&page=1`
-        ).then(res => res.json())
+          `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&language=es-ES&query=${encodeURIComponent(
+            keyword
+          )}&page=1`
+        ).then((res) => res.json())
       );
-  
+
       const results = await Promise.all(searchPromises);
-  
-      // Fusiona els resultats i ordena per popularitat
+
       const allMovies = results
-        .flatMap(result => result.results || [])
-        .filter((movie, index, self) =>
-          self.findIndex(m => m.id === movie.id) === index
-        )
-        .sort((a, b) => b.popularity - a.popularity); // Ordena per popularitat de major a menor
-  
-      setMovies(allMovies.slice(0, numberFilms)); // Usa directament el paràmetre
+        .flatMap((result) => result.results || [])
+        .filter((movie, index, self) => self.findIndex((m) => m.id === movie.id) === index);
+
+      setMovies(allMovies.slice(0, numberFilms));
     } catch (error) {
       console.error('Error searching movies by keywords:', error);
     } finally {
       setLoadingMovies(false);
     }
   };
-  
-  const renderMovieItem = ({ item }: { item: Movie }) => (
-    <TouchableOpacity style={styles.movieCard}>
-      <Image
-        source={{
-          uri: item.poster_path
-            ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}`
-            : 'https://via.placeholder.com/150x225'
-        }}
-        style={styles.moviePoster}
-      />
-      <View style={styles.movieInfo}>
-        <Text style={styles.movieTitle}>{item.title}</Text>
-        <Text style={styles.movieYear}>
-          {item.release_date ? new Date(item.release_date).getFullYear() : 'N/A'}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+
+  const renderMovieItem = ({ item }: { item: Movie }) => {
+    const isWatched = watchedMovies.includes(item.id);
+
+    return (
+      <TouchableOpacity style={styles.movieCard} onPress={() => toggleWatched(item.id)}>
+        <Image
+          source={{
+            uri: item.poster_path
+              ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}`
+              : 'https://via.placeholder.com/150x225',
+          }}
+          style={styles.moviePoster}
+        />
+        {isWatched && (
+          <View style={styles.checkmarkOverlay}>
+            <Text style={styles.checkmark}>✓</Text>
+          </View>
+        )}
+        <View style={styles.movieInfo}>
+          <Text style={styles.movieTitle}>{item.title}</Text>
+          <Text style={styles.movieYear}>
+            {item.release_date ? new Date(item.release_date).getFullYear() : 'N/A'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -219,10 +272,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#2e2e2e',
     borderRadius: 8,
     overflow: 'hidden',
+    position: 'relative',
   },
   moviePoster: {
     width: 80,
     height: 120,
+  },
+  checkmarkOverlay: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'green',
+    borderRadius: 10,
+    padding: 4,
+    zIndex: 1,
+  },
+  checkmark: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   movieInfo: {
     flex: 1,
