@@ -89,21 +89,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      {/* Menú inferior FIX i sense marges */}
+      {/* Menú inferior FIX */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity>
-          <Ionicons name="home" size={26} color="white" />
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={26} color="#FFDD95" />
         </TouchableOpacity>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')}>
           <Ionicons name="calendar" size={26} color="white" />
         </TouchableOpacity>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')}>
           <Ionicons name="add-circle" size={30} color="white" />
         </TouchableOpacity>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Progress')}>
           <Ionicons name="trophy" size={26} color="white" />
         </TouchableOpacity>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
           <Ionicons name="person" size={26} color="white" />
         </TouchableOpacity>
       </View>
@@ -178,6 +178,7 @@ const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'center',
     backgroundColor: '#2b2323',
     paddingVertical: 12,
     borderTopLeftRadius: 20,

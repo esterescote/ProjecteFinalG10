@@ -6,13 +6,27 @@ import {
   Dimensions,
   TouchableOpacity,
   ScrollView,
-  FlatList,
+  SafeAreaView,
 } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
+import { Ionicons } from '@expo/vector-icons';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const { width, height } = Dimensions.get('window');
 
-const MyChallengesScreen = () => {
+type RootStackParamList = {
+  Home: undefined;
+  NewChallenges: undefined;
+  MyChallenges: undefined;
+  Progress: undefined;
+  Profile: undefined;
+};
+
+type MyChallengesScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'MyChallenges'>;
+};
+
+const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState<'current' | 'completed'>('current');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [challenges] = useState([
@@ -38,124 +52,189 @@ const MyChallengesScreen = () => {
   ];
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>My Challenges</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.screen}>
+        <Text style={styles.title}>My Challenges</Text>
 
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity
-          style={[styles.toggleButton, activeTab === 'current' && styles.activeToggleButton]}
-          onPress={() => setActiveTab('current')}
-        >
-          <Text style={[styles.toggleButtonText, activeTab === 'current' && styles.activeToggleButtonText]}>Current Challenges</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.toggleButton, activeTab === 'completed' && styles.activeToggleButton]}
-          onPress={() => setActiveTab('completed')}
-        >
-          <Text style={[styles.toggleButtonText, activeTab === 'completed' && styles.activeToggleButtonText]}>Completed Challenges</Text>
-        </TouchableOpacity>
-      </View>
-
-      {activeTab === 'current' ? (
-        <ScrollView contentContainerStyle={styles.currentScrollContainer} showsVerticalScrollIndicator={false}>
-          <View style={styles.swiperContainerSmall}>
-            <Swiper
-              cards={challenges}
-              renderCard={(card) => (
-                <View style={styles.cardSmall}>
-                  <View style={styles.imagePlaceholder} />
-                  <View style={styles.cardContentSmall}>
-                    <Text style={styles.cardLabel}>Challenge</Text>
-                    <Text style={styles.cardTitle}>{card.title}</Text>
-                    <Text style={styles.cardProgressLabel}>Completed:</Text>
-                    <View style={styles.progressBar}><View style={[styles.progress, { width: `${card.progress * 100}%` }]} /></View>
-                  </View>
-                </View>
-              )}
-              backgroundColor="transparent"
-              cardIndex={0}
-              stackSize={2}
-              stackSeparation={10}
-              disableTopSwipe
-              disableBottomSwipe
-              infinite
-            />
-          </View>
-        </ScrollView>
-      ) : (
-        <ScrollView contentContainerStyle={styles.completedContainer} showsVerticalScrollIndicator={false}>
-          {/* Categories */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ justifyContent: 'center', flexDirection: 'row', width: '100%' }}
-            style={{ marginBottom: 10 }}
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity
+            style={[styles.toggleButton, activeTab === 'current' && styles.activeToggleButton]}
+            onPress={() => setActiveTab('current')}
+          >
+            <Text
+              style={[
+                styles.toggleButtonText,
+                activeTab === 'current' && styles.activeToggleButtonText,
+              ]}
             >
-                <View style={{ flexDirection: 'row', justifyContent: 'center', width: width }}>
-                    {categories.map((category) => (
-                    <TouchableOpacity
-                        key={category}
-                        onPress={() => setSelectedCategory(category)}
-                        style={[styles.categoryButton, selectedCategory === category && styles.activeCategoryButton]}
+              Current Challenges
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.toggleButton, activeTab === 'completed' && styles.activeToggleButton]}
+            onPress={() => setActiveTab('completed')}
+          >
+            <Text
+              style={[
+                styles.toggleButtonText,
+                activeTab === 'completed' && styles.activeToggleButtonText,
+              ]}
+            >
+              Completed Challenges
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {activeTab === 'current' ? (
+          <ScrollView
+            contentContainerStyle={styles.currentScrollContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.swiperContainerSmall}>
+              <Swiper
+                cards={challenges}
+                renderCard={(card) => (
+                  <View style={styles.cardSmall}>
+                    <View style={styles.imagePlaceholder} />
+                    <View style={styles.cardContentSmall}>
+                      <Text style={styles.cardLabel}>Challenge</Text>
+                      <Text style={styles.cardTitle}>{card.title}</Text>
+                      <Text style={styles.cardProgressLabel}>Completed:</Text>
+                      <View style={styles.progressBar}>
+                        <View style={[styles.progress, { width: `${card.progress * 100}%` }]} />
+                      </View>
+                    </View>
+                  </View>
+                )}
+                backgroundColor="transparent"
+                cardIndex={0}
+                stackSize={2}
+                stackSeparation={10}
+                disableTopSwipe
+                disableBottomSwipe
+                infinite
+              />
+            </View>
+          </ScrollView>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.completedContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Categories */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                justifyContent: 'center',
+                flexDirection: 'row',
+                width: '100%',
+              }}
+              style={{ marginBottom: 10 }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'center', width: width }}>
+                {categories.map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    onPress={() => setSelectedCategory(category)}
+                    style={[styles.categoryButton, selectedCategory === category && styles.activeCategoryButton]}
+                  >
+                    <Text
+                      style={[styles.categoryText, selectedCategory === category && styles.activeCategoryText]}
                     >
-                        <Text style={[styles.categoryText, selectedCategory === category && styles.activeCategoryText]}>
-                        {category}
-                        </Text>
-                    </TouchableOpacity>
-                    ))}
-                </View>
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </ScrollView>
 
-
-          {/* Completed Challenges */}
-          <Text style={styles.sectionTitle}>Your Completed Challenges</Text>
-          <View style={styles.separator} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll} 
-          contentContainerStyle={{
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexDirection: 'row',
-            width: '100%',
-          }}>
-            {completedChallenges.map((item, index) => (
-              <View key={index} style={styles.completedCardSmall}>
-                <Text style={styles.completedCardText}>{item.title}</Text>
-                <View style={styles.xpTag}><Text style={styles.xpText}>{item.xp} XP 🍿</Text></View>
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* Keep going text */}
-          <Text style={styles.keepGoing}>Keep going and complete more challenges!</Text>
-
-          {/* Recommended For You */}
-          <Text style={styles.sectionTitle}>Recommended For You</Text>
-          <View style={styles.separator} />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.horizontalScroll}
-            contentContainerStyle={styles.completedCardsContainer}
+            {/* Completed Challenges */}
+            <Text style={styles.sectionTitle}>Your Completed Challenges</Text>
+            <View style={styles.separator} />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalScroll}
+              contentContainerStyle={{
+                justifyContent: 'center',
+                alignItems: 'center',
+                flexDirection: 'row',
+                width: '100%',
+              }}
             >
-            {recommendedChallenges.map((title, index) => (
-              <View key={index} style={styles.recommendCard}><Text style={styles.recommendText}>{title}</Text></View>
-            ))}
-          </ScrollView>
+              {completedChallenges.map((item, index) => (
+                <View key={index} style={styles.completedCardSmall}>
+                  <Text style={styles.completedCardText}>{item.title}</Text>
+                  <View style={styles.xpTag}>
+                    <Text style={styles.xpText}>{item.xp} XP 🍿</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
 
-          {/* Footer Buttons */}
-          <View style={styles.footerButtons}>
-            <TouchableOpacity style={styles.footerButton}><Text style={styles.footerButtonText}>➕ Choose a challenge</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.footerButton}><Text style={styles.footerButtonText}>➕ Create new challenge</Text></TouchableOpacity>
-          </View>
-        </ScrollView>
-      )}
-    </View>
+            {/* Keep going text */}
+            <Text style={styles.keepGoing}>Keep going and complete more challenges!</Text>
+
+            {/* Recommended For You */}
+            <Text style={styles.sectionTitle}>Recommended For You</Text>
+            <View style={styles.separator} />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalScroll}
+              contentContainerStyle={styles.completedCardsContainer}
+            >
+              {recommendedChallenges.map((title, index) => (
+                <View key={index} style={styles.recommendCard}>
+                  <Text style={styles.recommendText}>{title}</Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Footer Buttons */}
+            <View style={styles.footerButtons}>
+              <TouchableOpacity style={styles.footerButton}>
+                <Text style={styles.footerButtonText}>➕ Choose a challenge</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.footerButton}>
+                <Text style={styles.footerButtonText}>➕ Create new challenge</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        )}
+      </View>
+
+      {/* Bottom Navigation - Same as HomeScreen */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={26} color={activeTab === 'home' ? '#FFDD95' : 'white'} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')}>
+          <Ionicons name="calendar" size={26} color="#FFDD95" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')}>
+          <Ionicons name="add-circle" size={30} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Progress')}>
+          <Ionicons name="trophy" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person" size={26} color="white" />
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#1e1e1e',
+  },
+  screen: {
+    flex: 1,
     paddingTop: 60,
   },
   title: {
@@ -221,10 +300,15 @@ const styles = StyleSheet.create({
   cardTitle: { color: 'white', fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
   cardProgressLabel: { color: '#ccc', fontSize: 14, marginTop: 10 },
   progressBar: {
-    width: '100%', height: 8, backgroundColor: '#444', borderRadius: 5, overflow: 'hidden', marginTop: 5,
+    width: '100%',
+    height: 8,
+    backgroundColor: '#444',
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginTop: 5,
   },
   progress: { height: 8, backgroundColor: 'green' },
-  
+
   completedContainer: {
     paddingBottom: 60,
     paddingTop: 20,
@@ -305,7 +389,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerButton: {
-    paddingVertical: 10,  
+    paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -330,6 +414,16 @@ const styles = StyleSheet.create({
   },
   activeCategoryText: {
     color: '#fff',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#2b2323',
+    paddingVertical: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
   },
 });
 

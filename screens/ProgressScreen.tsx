@@ -1,130 +1,173 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const ProgressScreen: React.FC = () => {
-  const weekProgress = [1, 1, 0, 1, 2, 4, 2];  // Pel gràfic de barres
-  
+  const navigation = useNavigation();
+
+  const weekProgress = [1, 1, 0, 1, 2, 4, 2]; // dades per a gràfic de barres
+
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>General Progress</Text>
-      <Text style={styles.subtitle}>LEVEL 1</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.screen}>
+        <Text style={styles.title}>General Progress</Text>
+        <Text style={styles.subtitle}>LEVEL 1</Text>
 
-      {/* Secció de Desafiaments Completats */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, styles.centeredText]}>You’ve completed 5 Challenges!</Text>
-        <View style={styles.progressBarContainer}>
-          <View style={styles.progressBarBackground} />
-          <View style={[styles.progressBarForeground, { width: '15%' }]} />
-        </View>
-        <View style={styles.cardsContainer}>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Marvel Marathon</Text>
+        {/* Secció Desafiaments Completats */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, styles.centeredText]}>
+            You’ve completed 5 Challenges!
+          </Text>
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarBackground} />
+            <View style={[styles.progressBarForeground, { width: '15%' }]} />
           </View>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Lord of the Rings & The Hobbit Marathon</Text>
-          </View>
-        </View>
-        <TouchableOpacity>
-          <Text style={[styles.seeAllText, styles.leftAlign]}>See all</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.separator} />
-
-      {/* Secció de Insígnies (actualitzat per horitzontal) */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, styles.centeredText]}>You’ve got 4 Badges!</Text>
-        <View style={styles.progressBarContainer}>
-          <View style={styles.progressBarBackground} />
-          <View style={[styles.progressBarForeground, { width: '35%' }]} />
-        </View>
-        <View style={styles.badgesContainer}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeEmoji}>🟥</Text>
-            <View style={styles.badgeTextContainer}>
-              <Text style={styles.badgeText}>Newbie Viewer</Text>
-              <Text style={styles.badgeDescription}>Watching your first film</Text>
+          <View style={styles.cardsContainer}>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Marvel Marathon</Text>
+            </View>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Lord of the Rings & The Hobbit Marathon</Text>
             </View>
           </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeEmoji}>🟪</Text>
-            <View style={styles.badgeTextContainer}>
-              <Text style={styles.badgeText}>Lover of the Seventh Art</Text>
-              <Text style={styles.badgeDescription}>Watching +10 films</Text>
-            </View>
-          </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeEmoji}>🟧</Text>
-            <View style={styles.badgeTextContainer}>
-              <Text style={styles.badgeText}>Aspiring Cinephile</Text>
-              <Text style={styles.badgeDescription}>Completing your first challenge</Text>
-            </View>
-          </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeEmoji}>🟦</Text>
-            <View style={styles.badgeTextContainer}>
-              <Text style={styles.badgeText}>Supporting Actor</Text>
-              <Text style={styles.badgeDescription}>Completing +5 challenges</Text>
-            </View>
-          </View>
+          <TouchableOpacity>
+            <Text style={[styles.seeAllText, styles.leftAlign]}>See all</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity>
-          <Text style={[styles.seeAllText, styles.leftAlign]}>See all</Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.separator} />
+        <View style={styles.separator} />
 
-      {/* Secció d'Estadístiques */}
-      <Text style={[styles.sectionTitle, styles.centeredText]}>Your Stats</Text>
-      <View style={styles.statContainer}>
-        <View style={styles.leftColumn}>
-          <Text style={styles.leftText}>Films Watched</Text>
-        </View>
-        <View style={styles.middleColumn}>
-          <View style={styles.barChart}>
-            {/* Línies horitzontals dins del mateix contenidor de barres */}
-            <View style={[styles.horizontalLine, { top: 80 }]} />
-            <View style={[styles.horizontalLine, { top: 60 }]} />
-            <View style={[styles.horizontalLine, { top: 40 }]} />
-            <View style={[styles.horizontalLine, { top: 20 }]} />
-            <View style={[styles.horizontalLine, { top: 0 }]} />
-            
-            {/* Barres del gràfic */}
-            {weekProgress.map((value, index) => (
-              <View key={index} style={[styles.bar, { height: value * 20 }]} />
+        {/* Secció Insígnies */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, styles.centeredText]}>
+            You’ve got 4 Badges!
+          </Text>
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarBackground} />
+            <View style={[styles.progressBarForeground, { width: '35%' }]} />
+          </View>
+          <View style={styles.badgesContainer}>
+            {[
+              {
+                emoji: '🟥',
+                title: 'Newbie Viewer',
+                description: 'Watching your first film',
+              },
+              {
+                emoji: '🟪',
+                title: 'Lover of the Seventh Art',
+                description: 'Watching +10 films',
+              },
+              {
+                emoji: '🟧',
+                title: 'Aspiring Cinephile',
+                description: 'Completing your first challenge',
+              },
+              {
+                emoji: '🟦',
+                title: 'Supporting Actor',
+                description: 'Completing +5 challenges',
+              },
+            ].map(({ emoji, title, description }, index) => (
+              <View key={index} style={styles.badge}>
+                <Text style={styles.badgeEmoji}>{emoji}</Text>
+                <View style={styles.badgeTextContainer}>
+                  <Text style={styles.badgeText}>{title}</Text>
+                  <Text style={styles.badgeDescription}>{description}</Text>
+                </View>
+              </View>
             ))}
           </View>
-          <View style={styles.daysOfWeek}>
-            <Text style={styles.dayText}>M</Text>
-            <Text style={styles.dayText}>T</Text>
-            <Text style={styles.dayText}>W</Text>
-            <Text style={styles.dayText}>T</Text>
-            <Text style={styles.dayText}>F</Text>
-            <Text style={styles.dayText}>S</Text>
-            <Text style={styles.dayText}>S</Text>
+          <TouchableOpacity>
+            <Text style={[styles.seeAllText, styles.leftAlign]}>See all</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.separator} />
+
+        {/* Secció Estadístiques */}
+        <Text style={[styles.sectionTitle, styles.centeredText]}>Your Stats</Text>
+        <View style={styles.statContainer}>
+          <View style={styles.leftColumn}>
+            <Text style={styles.leftText}>Films Watched</Text>
+          </View>
+          <View style={styles.middleColumn}>
+            <View style={styles.barChart}>
+              {/* Línies horitzontals */}
+              {[80, 60, 40, 20, 0].map((topPos) => (
+                <View
+                  key={topPos}
+                  style={[styles.horizontalLine, { top: topPos }]}
+                />
+              ))}
+
+              {/* Barres del gràfic */}
+              {weekProgress.map((value, index) => (
+                <View
+                  key={index}
+                  style={[styles.bar, { height: value * 20 }]}
+                />
+              ))}
+            </View>
+            <View style={styles.daysOfWeek}>
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+                <Text key={i} style={styles.dayText}>
+                  {day}
+                </Text>
+              ))}
+            </View>
+          </View>
+          <View style={styles.rightColumn}>
+            <View style={styles.numbersColumn}>
+              {[0, 1, 2, 3, 4, 5].map((num) => (
+                <Text key={num} style={styles.numberText}>
+                  {num}
+                </Text>
+              ))}
+            </View>
           </View>
         </View>
-        <View style={styles.rightColumn}>
-          <View style={styles.numbersColumn}>
-            <Text style={styles.numberText}>0</Text>
-            <Text style={styles.numberText}>1</Text>
-            <Text style={styles.numberText}>2</Text>
-            <Text style={styles.numberText}>3</Text>
-            <Text style={styles.numberText}>4</Text>
-            <Text style={styles.numberText}>5</Text>
-          </View>
-        </View>
+      </ScrollView>
+
+      {/* Barra inferior funcional */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')}>
+          <Ionicons name="calendar" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')}>
+          <Ionicons name="add-circle" size={30} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Progress')}>
+          <Ionicons name="trophy" size={26} color="#FFDD95" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person" size={26} color="white" />
+        </TouchableOpacity>
       </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: {
+  safeArea: {
+    flex: 1,
     backgroundColor: '#3e3e3e',
+  },
+  screen: {
     paddingTop: 40,
     paddingHorizontal: 15,
     paddingBottom: 60,
@@ -153,15 +196,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   centeredText: {
-    textAlign: 'center', // Centrar el text
+    textAlign: 'center',
   },
   progressBarContainer: {
     width: '100%',
     height: 20,
-    backgroundColor: 'white',
     borderRadius: 5,
     marginBottom: 15,
+    backgroundColor: '#ccc',
     overflow: 'hidden',
+    position: 'relative',
   },
   progressBarBackground: {
     width: '100%',
@@ -189,13 +233,14 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: 'white',
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   seeAllText: {
     color: 'white',
     marginTop: 10,
   },
   leftAlign: {
-    textAlign: 'left', // Alineat a l'esquerra
+    textAlign: 'left',
   },
   separator: {
     height: 1,
@@ -203,20 +248,20 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   badgesContainer: {
-    flexDirection: 'column', // Canviat a columna per a vertical
-    alignItems: 'flex-start', // Establir l'alineació vertical a l'esquerra
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   badge: {
-    flexDirection: 'row', // Canviat a horitzontal
-    alignItems: 'center', // Alineació horitzontal
-    marginBottom: 15, // Separació entre insígnies
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   badgeEmoji: {
-    fontSize: 30, // Mida més gran per l'emoji
-    marginRight: 10, // Separació entre l'emoji i el text
+    fontSize: 30,
+    marginRight: 10,
   },
   badgeTextContainer: {
-    flexDirection: 'column', // Text principal i descripció en columna
+    flexDirection: 'column',
   },
   badgeText: {
     color: 'white',
@@ -225,19 +270,6 @@ const styles = StyleSheet.create({
   badgeDescription: {
     color: '#ccc',
     fontSize: 12,
-  },
-  dropdownContainer: {
-    backgroundColor: '#2a2a2a',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 20,
-    color: 'white',
-    width: 'auto',  // Ajustar a l'amplada del text
-    alignSelf: 'center', // Centrar el contenidor horitzontalment
-  },
-  dropdownText: {
-    color: 'white',
-    fontSize: 16,
   },
   statContainer: {
     flexDirection: 'row',
@@ -265,9 +297,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    height: 100,  // Altura del gràfic
+    height: 100,
     marginBottom: 10,
     position: 'relative',
+    width: width * 0.4,
   },
   bar: {
     backgroundColor: 'green',
@@ -278,18 +311,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     borderTopWidth: 1,
-    borderColor: '#bbb',  // Gris clar per a les línies
+    borderColor: '#bbb',
   },
   daysOfWeek: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 10,
   },
   dayText: {
     color: 'white',
     fontSize: 12,
     textAlign: 'center',
+    width: 30,
   },
   rightColumn: {
     width: '30%',
@@ -298,11 +331,22 @@ const styles = StyleSheet.create({
   },
   numbersColumn: {
     justifyContent: 'space-between',
+    height: 100,
   },
   numberText: {
     color: 'white',
     fontSize: 12,
     textAlign: 'center',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#2b2323',
+    paddingVertical: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
   },
 });
 

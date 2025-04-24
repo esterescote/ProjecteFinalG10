@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  Image,
+  Modal,
+  SafeAreaView,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
 type Challenge = {
@@ -14,10 +25,11 @@ type Challenge = {
 
 const NewChallengesScreen: React.FC = () => {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const navigation = useNavigation();
 
   useEffect(() => {
     loadUserAndChallenges();
@@ -39,37 +51,29 @@ const NewChallengesScreen: React.FC = () => {
         ...challenge,
         added: false,
       }));
-
       const finalChallenges = await applyStoredChallengeStatus(baseChallenges, userId);
       setChallenges(finalChallenges);
     }
   };
 
   const applyStoredChallengeStatus = async (challenges: Challenge[], userId: string) => {
-    const updated = await Promise.all(
+    return await Promise.all(
       challenges.map(async (challenge) => {
         const status = await AsyncStorage.getItem(`${userId}_${challenge.id}`);
-        return {
-          ...challenge,
-          added: status === 'true',
-        };
+        return { ...challenge, added: status === 'true' };
       })
     );
-    return updated;
   };
 
   const handleAddChallenge = async (challengeId: string) => {
     if (!userId) return;
-
-    const { error } = await supabase.from('user_challenges').insert([
-      {
-        user_id: userId,
-        challenge_id: challengeId,
-        status: 'pending',
-        start_date: new Date().toISOString(),
-        end_date: null,
-      },
-    ]);
+    const { error } = await supabase.from('user_challenges').insert([{
+      user_id: userId,
+      challenge_id: challengeId,
+      status: 'pending',
+      start_date: new Date().toISOString(),
+      end_date: null,
+    }]);
 
     if (error) {
       setMessage(`Error: ${error.message}`);
@@ -78,13 +82,11 @@ const NewChallengesScreen: React.FC = () => {
       updateChallengeState(challengeId, true);
       setMessage('Challenge added correctly!');
     }
-
     setModalVisible(true);
   };
 
   const handleRemoveChallenge = async (challengeId: string) => {
     if (!userId) return;
-
     const { error } = await supabase
       .from('user_challenges')
       .delete()
@@ -98,89 +100,114 @@ const NewChallengesScreen: React.FC = () => {
       updateChallengeState(challengeId, false);
       setMessage('Challenge removed.');
     }
-
     setModalVisible(true);
   };
 
   const updateChallengeState = (challengeId: string, added: boolean) => {
     setChallenges((prev) =>
-      prev.map((challenge) =>
-        challenge.id === challengeId ? { ...challenge, added } : challenge
-      )
+      prev.map((c) => (c.id === challengeId ? { ...c, added } : c))
     );
   };
 
-  const handleCloseModal = () => {
-    setModalVisible(false);
-  };
-
-  const renderItem = ({ item }: { item: Challenge }) => {
-    return (
-      <View style={styles.challengeContainer}>
-        <Text style={styles.challengeTitle}>{item.name}</Text>
-        <Image source={{ uri: item.image }} style={styles.image} />
-        <Text style={styles.description}>{item.description}</Text>
-        <View style={styles.separator}></View>
-        <View style={styles.challengeBox}>
+  const renderItem = ({ item }: { item: Challenge }) => (
+    <View style={styles.challengeContainer}>
+      <Text style={styles.challengeTitle}>{item.name}</Text>
+      <Image source={{ uri: item.image }} style={styles.image} />
+      <Text style={styles.description}>{item.description}</Text>
+      <View style={styles.separator} />
+      <View style={styles.buttonRow}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push({
-            pathname: '/challenge-details',
-            params: { id: item.id }
-          })}
+          onPress={() =>
+            router.push({
+              pathname: '/challenge-details',
+              params: { id: item.id },
+            })
+          }
         >
           <Text style={styles.buttonText}>Visualize</Text>
         </TouchableOpacity>
 
-
-          {item.added ? (
-            <TouchableOpacity style={[styles.button, styles.removeButton]} onPress={() => handleRemoveChallenge(item.id)}>
-              <Text style={styles.buttonText}>Remove</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.button} onPress={() => handleAddChallenge(item.id)}>
-              <Text style={styles.buttonText}>Add</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {item.added ? (
+          <TouchableOpacity
+            style={[styles.button, styles.removeButton]}
+            onPress={() => handleRemoveChallenge(item.id)}
+          >
+            <Text style={styles.buttonText}>Remove</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => handleAddChallenge(item.id)}
+          >
+            <Text style={styles.buttonText}>Add</Text>
+          </TouchableOpacity>
+        )}
       </View>
-    );
-  };
+    </View>
+  );
+
+  const handleCloseModal = () => setModalVisible(false);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Challenges List</Text>
-      <Text style={styles.subtitle}>List of existing challenges to get started</Text>
-      <FlatList
-        data={challenges}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Challenges List</Text>
+        <Text style={styles.subtitle}>List of existing challenges to get started</Text>
 
-      <Modal
-        transparent={true}
-        animationType="fade"
-        visible={modalVisible}
-        onRequestClose={handleCloseModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalMessage}>{message}</Text>
-            <TouchableOpacity style={styles.modalButton} onPress={handleCloseModal}>
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
+        <FlatList
+          data={challenges}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        />
+
+        <Modal
+          transparent={true}
+          animationType="fade"
+          visible={modalVisible}
+          onRequestClose={handleCloseModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalMessage}>{message}</Text>
+              <TouchableOpacity style={styles.modalButton} onPress={handleCloseModal}>
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+
+      {/* Barra inferior funcional */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')}>
+          <Ionicons name="calendar" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')}>
+          <Ionicons name="add-circle" size={30} color="#FFDD95" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Progress')}>
+          <Ionicons name="trophy" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person" size={26} color="white" />
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#1e1e1e',
+  },
+  container: {
+    flex: 1,
     padding: 20,
     paddingTop: 60,
   },
@@ -225,7 +252,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     marginVertical: 10,
   },
-  challengeBox: {
+  buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -270,21 +297,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
-  menu: {
+  bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#1e1e1e',
+    alignItems: 'center',
+    backgroundColor: '#2b2323',
     paddingVertical: 12,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  menuText: {
-    color: 'white',
-    fontSize: 24,
+    width: '100%',
   },
 });
 

@@ -1,17 +1,28 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// Imagen por defecto de perfil (anónimo)
-const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png'; // Esta es una imagen de ejemplo
+type RootStackParamList = {
+  Home: undefined;
+  NewChallenges: undefined;
+  MyChallenges: undefined;
+  Progress: undefined;
+  Profile: undefined;
+};
 
-const ProfileScreen = () => {
-  // Datos simulados para el perfil del usuario
+type ProfileScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Profile'>;
+};
+
+const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
+
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const userData = {
     username: 'John Doe',
     xp: 1500,
-    avatar: null, // Cambia esta línea a una URL si tienes una imagen de avatar
-    headerImage: 'https://i.imgur.com/2yHBo8a.jpg', // Imagen de cabecera
+    avatar: null,
+    headerImage: 'https://i.imgur.com/2yHBo8a.jpg',
     favouriteFilms: [
       { title: 'Inception', image: 'https://image.tmdb.org/t/p/w500/6V1bK1pEAT2k0i3GTLhxvDZjzQS.jpg' },
       { title: 'The Matrix', image: 'https://image.tmdb.org/t/p/w500/4Y1cHLZ3vbs4lG5Xfsk9E3tMQQR.jpg' },
@@ -23,24 +34,16 @@ const ProfileScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Imagen de encabezado */}
         <Image source={{ uri: userData.headerImage }} style={styles.headerImage} />
-        
-        {/* Imagen de perfil */}
         <Image
-          source={{ uri: userData.avatar || defaultAvatar }} // Si no hay avatar, se usa la imagen por defecto
+          source={{ uri: userData.avatar || defaultAvatar }}
           style={styles.avatar}
         />
-
-        {/* Nombre de usuario */}
         <Text style={styles.username}>{userData.username}</Text>
-        
-        {/* XP del usuario */}
         <Text style={styles.xp}>XP: {userData.xp}</Text>
 
-        {/* Películas favoritas */}
         <Text style={styles.sectionTitle}>Favourite Films</Text>
         <View style={styles.filmList}>
           {userData.favouriteFilms.map((film, index) => (
@@ -51,7 +54,6 @@ const ProfileScreen = () => {
           ))}
         </View>
 
-        {/* Desafíos actuales */}
         <Text style={styles.sectionTitle}>Current Challenge</Text>
         <View style={styles.challengeList}>
           {userData.currentChallenge.map((challenge, index) => (
@@ -63,36 +65,36 @@ const ProfileScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Menú inferior FIX */}
+      {/* Barra de navegació inferior */}
       <View style={styles.bottomNav}>
-        <View style={styles.navIcon}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Ionicons name="home" size={26} color="white" />
-        </View>
-        <View style={styles.navIcon}>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')}>
           <Ionicons name="calendar" size={26} color="white" />
-        </View>
-        <View style={styles.navIcon}>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')}>
           <Ionicons name="add-circle" size={30} color="white" />
-        </View>
-        <View style={styles.navIcon}>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Progress')}>
           <Ionicons name="trophy" size={26} color="white" />
-        </View>
-        <View style={styles.navIcon}>
-          <Ionicons name="person" size={26} color="white" />
-        </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person" size={26} color="#FFDD95" />
+        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#fff',
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingBottom: 100, // Para evitar que el contenido quede debajo del menú inferior
+    paddingBottom: 100,
   },
   headerImage: {
     width: '100%',
@@ -109,7 +111,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 150,
     left: '50%',
-    marginLeft: -60, // Para centrar la imagen
+    marginLeft: -60,
   },
   username: {
     fontSize: 24,
@@ -132,8 +134,7 @@ const styles = StyleSheet.create({
   filmList: {
     flexDirection: 'row',
     marginBottom: 20,
-    marginLeft: 20,
-    marginRight: 20,
+    marginHorizontal: 20,
   },
   filmCard: {
     marginRight: 15,
@@ -152,8 +153,7 @@ const styles = StyleSheet.create({
   challengeList: {
     flexDirection: 'row',
     marginBottom: 20,
-    marginLeft: 20,
-    marginRight: 20,
+    marginHorizontal: 20,
   },
   challengeCard: {
     marginRight: 15,
@@ -176,10 +176,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    width: '100%',
-  },
-  navIcon: {
-    alignItems: 'center',
   },
 });
 
