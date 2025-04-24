@@ -10,13 +10,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ParamListBase } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
-const ProgressScreen: React.FC = () => {
-  const navigation = useNavigation();
+type NavigationProp = NativeStackNavigationProp<ParamListBase>;
 
-  const weekProgress = [1, 1, 0, 1, 2, 4, 2]; // dades per a gràfic de barres
+const ProgressScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
+  const weekProgress = [1, 1, 0, 1, 2, 4, 2];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -24,7 +27,6 @@ const ProgressScreen: React.FC = () => {
         <Text style={styles.title}>General Progress</Text>
         <Text style={styles.subtitle}>LEVEL 1</Text>
 
-        {/* Secció Desafiaments Completats */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, styles.centeredText]}>
             You’ve completed 5 Challenges!
@@ -38,7 +40,9 @@ const ProgressScreen: React.FC = () => {
               <Text style={styles.cardTitle}>Marvel Marathon</Text>
             </View>
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Lord of the Rings & The Hobbit Marathon</Text>
+              <Text style={styles.cardTitle}>
+                Lord of the Rings & The Hobbit Marathon
+              </Text>
             </View>
           </View>
           <TouchableOpacity>
@@ -48,7 +52,6 @@ const ProgressScreen: React.FC = () => {
 
         <View style={styles.separator} />
 
-        {/* Secció Insígnies */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, styles.centeredText]}>
             You’ve got 4 Badges!
@@ -96,23 +99,21 @@ const ProgressScreen: React.FC = () => {
 
         <View style={styles.separator} />
 
-        {/* Secció Estadístiques */}
-        <Text style={[styles.sectionTitle, styles.centeredText]}>Your Stats</Text>
+        <Text style={[styles.sectionTitle, styles.centeredText]}>
+          Your Stats
+        </Text>
         <View style={styles.statContainer}>
           <View style={styles.leftColumn}>
             <Text style={styles.leftText}>Films Watched</Text>
           </View>
           <View style={styles.middleColumn}>
             <View style={styles.barChart}>
-              {/* Línies horitzontals */}
               {[80, 60, 40, 20, 0].map((topPos) => (
                 <View
                   key={topPos}
                   style={[styles.horizontalLine, { top: topPos }]}
                 />
               ))}
-
-              {/* Barres del gràfic */}
               {weekProgress.map((value, index) => (
                 <View
                   key={index}
@@ -140,7 +141,6 @@ const ProgressScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Barra inferior funcional */}
       <View style={styles.bottomNav}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Ionicons name="home" size={26} color="white" />
@@ -165,188 +165,173 @@ const ProgressScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#3e3e3e',
+    backgroundColor: '#0C0F14',
   },
   screen: {
-    paddingTop: 40,
-    paddingHorizontal: 15,
-    paddingBottom: 60,
+    padding: 20,
+    paddingBottom: 100,
   },
   title: {
+    fontSize: 26,
     color: 'white',
-    fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subtitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    color: '#FFDD95',
+    fontSize: 18,
     marginBottom: 20,
   },
   section: {
-    marginBottom: 10,
+    marginBottom: 30,
   },
   sectionTitle: {
-    color: 'white',
     fontSize: 18,
-    fontWeight: 'bold',
+    color: 'white',
     marginBottom: 10,
   },
   centeredText: {
     textAlign: 'center',
   },
   progressBarContainer: {
-    width: '100%',
-    height: 20,
+    height: 10,
+    backgroundColor: '#1F1F1F',
     borderRadius: 5,
-    marginBottom: 15,
-    backgroundColor: '#ccc',
+    marginBottom: 10,
     overflow: 'hidden',
-    position: 'relative',
   },
   progressBarBackground: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#ccc',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#1F1F1F',
   },
   progressBarForeground: {
     height: '100%',
-    backgroundColor: 'green',
-    position: 'absolute',
-    top: 0,
-    left: 0,
+    backgroundColor: '#FFDD95',
   },
   cardsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
   },
   card: {
-    backgroundColor: '#800020',
+    flex: 1,
+    backgroundColor: '#1F1F1F',
+    padding: 12,
     borderRadius: 10,
-    padding: 50,
-    width: '45%',
-    alignItems: 'center',
   },
   cardTitle: {
     color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
   },
   seeAllText: {
-    color: 'white',
-    marginTop: 10,
+    color: '#FFDD95',
+    fontSize: 14,
   },
   leftAlign: {
     textAlign: 'left',
+    marginTop: 10,
   },
   separator: {
     height: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#333',
     marginVertical: 20,
   },
   badgesContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+    gap: 15,
+    marginTop: 10,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
   },
   badgeEmoji: {
-    fontSize: 30,
-    marginRight: 10,
+    fontSize: 26,
+    marginRight: 12,
   },
   badgeTextContainer: {
-    flexDirection: 'column',
+    flex: 1,
   },
   badgeText: {
     color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   badgeDescription: {
-    color: '#ccc',
-    fontSize: 12,
+    color: '#AAA',
+    fontSize: 13,
   },
   statContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    marginVertical: 20,
+    marginTop: 20,
   },
   leftColumn: {
-    width: '30%',
+    width: 50,
     justifyContent: 'center',
-    alignItems: 'flex-start',
   },
   leftText: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 12,
+    transform: [{ rotate: '-90deg' }],
   },
   middleColumn: {
-    width: '40%',
-    justifyContent: 'center',
+    flex: 1,
     alignItems: 'center',
   },
   barChart: {
-    flexDirection: 'row-reverse',
+    height: 100,
+    flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    height: 100,
-    marginBottom: 10,
     position: 'relative',
-    width: width * 0.4,
-  },
-  bar: {
-    backgroundColor: 'green',
-    width: 30,
-    marginHorizontal: 5,
+    width: '100%',
   },
   horizontalLine: {
     position: 'absolute',
-    width: '100%',
-    borderTopWidth: 1,
-    borderColor: '#bbb',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#444',
+  },
+  bar: {
+    width: 12,
+    backgroundColor: '#FFDD95',
+    marginHorizontal: 4,
+    borderRadius: 4,
   },
   daysOfWeek: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    marginTop: 5,
   },
   dayText: {
-    color: 'white',
+    color: '#AAA',
     fontSize: 12,
+    width: 12,
     textAlign: 'center',
-    width: 30,
   },
   rightColumn: {
-    width: '30%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 30,
+    justifyContent: 'space-between',
   },
   numbersColumn: {
-    justifyContent: 'space-between',
-    height: 100,
+    alignItems: 'flex-start',
   },
   numberText: {
-    color: 'white',
+    color: '#AAA',
     fontSize: 12,
-    textAlign: 'center',
   },
   bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    width: width,
+    backgroundColor: '#1F1F1F',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#2b2323',
-    paddingVertical: 12,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    width: '100%',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
   },
 });
 

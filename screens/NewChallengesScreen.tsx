@@ -13,7 +13,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';  // Importa la tipologia per a la navegació
 import { useRouter } from 'expo-router';
+
+// Defineix els tipus de les rutes
+type RootStackParamList = {
+  Home: undefined;
+  MyChallenges: undefined;
+  NewChallenges: undefined;
+  Progress: undefined;
+  Profile: undefined;
+  'challenge-details': { id: string };  // Si tens una pantalla amb paràmetres
+};
 
 type Challenge = {
   id: string;
@@ -28,8 +39,10 @@ const NewChallengesScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // Tipatge per a la navegació
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const router = useRouter();
-  const navigation = useNavigation();
 
   useEffect(() => {
     loadUserAndChallenges();

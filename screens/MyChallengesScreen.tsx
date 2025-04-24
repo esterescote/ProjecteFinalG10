@@ -62,10 +62,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
             onPress={() => setActiveTab('current')}
           >
             <Text
-              style={[
-                styles.toggleButtonText,
-                activeTab === 'current' && styles.activeToggleButtonText,
-              ]}
+              style={[styles.toggleButtonText, activeTab === 'current' && styles.activeToggleButtonText]}
             >
               Current Challenges
             </Text>
@@ -76,10 +73,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
             onPress={() => setActiveTab('completed')}
           >
             <Text
-              style={[
-                styles.toggleButtonText,
-                activeTab === 'completed' && styles.activeToggleButtonText,
-              ]}
+              style={[styles.toggleButtonText, activeTab === 'completed' && styles.activeToggleButtonText]}
             >
               Completed Challenges
             </Text>
@@ -138,16 +132,10 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
                   <TouchableOpacity
                     key={category}
                     onPress={() => setSelectedCategory(category)}
-                    style={[
-                      styles.categoryButton,
-                      selectedCategory === category && styles.activeCategoryButton,
-                    ]}
+                    style={[styles.categoryButton, selectedCategory === category && styles.activeCategoryButton]}
                   >
                     <Text
-                      style={[
-                        styles.categoryText,
-                        selectedCategory === category && styles.activeCategoryText,
-                      ]}
+                      style={[styles.categoryText, selectedCategory === category && styles.activeCategoryText]}
                     >
                       {category}
                     </Text>
@@ -180,8 +168,10 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
               ))}
             </ScrollView>
 
+            {/* Keep going text */}
             <Text style={styles.keepGoing}>Keep going and complete more challenges!</Text>
 
+            {/* Recommended For You */}
             <Text style={styles.sectionTitle}>Recommended For You</Text>
             <View style={styles.separator} />
             <ScrollView
@@ -197,6 +187,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
               ))}
             </ScrollView>
 
+            {/* Footer Buttons */}
             <View style={styles.footerButtons}>
               <TouchableOpacity style={styles.footerButton}>
                 <Text style={styles.footerButtonText}>➕ Choose a challenge</Text>
