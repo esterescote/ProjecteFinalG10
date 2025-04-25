@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { supabase } from '../lib/supabase'; // Asegúrate de tener esto bien importado
 
 type RootStackParamList = {
   Home: undefined;
@@ -18,10 +19,32 @@ type ProfileScreenProps = {
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setUser(user);
+      } else {
+        console.log('Usuario no autenticado:', error?.message);
+      }
+
+      setLoading(false);
+    };
+
+    fetchUser();
+  }, []);
+
   const userData = {
-    username: 'John Doe',
-    xp: 1500,
-    avatar: null,
+    username: user?.user_metadata?.username || 'John Doe', // Nombre de usuario desde Supabase
+    xp: 1500, // XP inventado
+    avatar: user?.user_metadata?.avatar_url || null, // Avatar del usuario o uno por defecto
     headerImage: 'https://i.imgur.com/2yHBo8a.jpg',
     favouriteFilms: [
       { title: 'Inception', image: 'https://image.tmdb.org/t/p/w500/6V1bK1pEAT2k0i3GTLhxvDZjzQS.jpg' },
@@ -32,6 +55,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       { title: 'Challenge 2', image: 'https://www.eyeforfilm.co.uk/images/newsite/the-shawshank-redemption_600.webp' },
     ],
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#800000" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -65,7 +96,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Barra de navegació inferior */}
+      {/* Barra de navegación inferior */}
       <View style={styles.bottomNav}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Ionicons name="home" size={26} color="white" />
@@ -176,6 +207,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
