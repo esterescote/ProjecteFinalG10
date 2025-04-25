@@ -59,7 +59,7 @@ const Login = ({ navigation }: any) => {
 
       <TextInput
         style={styles.input}
-        placeholder="Email Address or Username"
+        placeholder="Email Address"
         placeholderTextColor="#ccc"
         value={email}
         onChangeText={setEmail}

@@ -66,7 +66,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
 
           {/* Secció 2 */}
-          <Text style={styles.sectionTitle}>My Challenge</Text>
+          <Text style={styles.sectionTitle}>My Challenges</Text>
           <View style={styles.separator} />
           <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('MyChallenges')}>
             <Image
