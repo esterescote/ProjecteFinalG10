@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Button, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { supabase } from '../lib/supabase'; // Asegúrate de tener esto bien importado
+import { supabase } from '../lib/supabase';
+import * as Calendar from 'expo-calendar';
+import { Calendar as CalendarView, DateData } from 'react-native-calendars';
+
 
 type RootStackParamList = {
   Home: undefined;
@@ -21,6 +24,7 @@ const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [calendarId, setCalendarId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -34,17 +38,51 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       } else {
         console.log('Usuario no autenticado:', error?.message);
       }
-
       setLoading(false);
     };
 
+    const getCalendarPermission = async () => {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status === 'granted') {
+        const calendars = await Calendar.getCalendarsAsync();
+        const defaultCalendar = calendars.find(c => c.allowsModifications);
+        if (defaultCalendar) {
+          setCalendarId(defaultCalendar.id);
+        }
+      } else {
+        Alert.alert('Permís denegat', 'No podem accedir al teu calendari.');
+      }
+    };
+
+    getCalendarPermission();
     fetchUser();
   }, []);
 
+  const addEventToCalendar = async (dateString: string) => {
+    if (!calendarId) {
+      Alert.alert('Error', 'No s\'ha trobat un calendari per defecte.');
+      return;
+    }
+
+    try {
+      await Calendar.createEventAsync(calendarId, {
+        title: 'Nova activitat de repte!',
+        startDate: new Date(dateString),
+        endDate: new Date(new Date(dateString).getTime() + 60 * 60 * 1000), // +1h
+        timeZone: 'GMT',
+        location: 'App de Reptes',
+      });
+      Alert.alert('Fet!', 'S\'ha afegit una activitat al teu calendari.');
+    } catch (error) {
+      console.log('Error afegint al calendari:', error);
+      Alert.alert('Error', 'No s\'ha pogut afegir l\'esdeveniment.');
+    }
+  };
+
   const userData = {
-    username: user?.user_metadata?.username || 'John Doe', // Nombre de usuario desde Supabase
-    xp: 1500, // XP inventado
-    avatar: user?.user_metadata?.avatar_url || null, // Avatar del usuario o uno por defecto
+    username: user?.user_metadata?.username || 'John Doe',
+    xp: 1500,
+    avatar: user?.user_metadata?.avatar_url || null,
     headerImage: 'https://i.imgur.com/2yHBo8a.jpg',
     favouriteFilms: [
       { title: 'Inception', image: 'https://image.tmdb.org/t/p/w500/6V1bK1pEAT2k0i3GTLhxvDZjzQS.jpg' },
@@ -68,10 +106,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Image source={{ uri: userData.headerImage }} style={styles.headerImage} />
-        <Image
-          source={{ uri: userData.avatar || defaultAvatar }}
-          style={styles.avatar}
-        />
+        <Image source={{ uri: userData.avatar || defaultAvatar }} style={styles.avatar} />
         <Text style={styles.username}>{userData.username}</Text>
         <Text style={styles.xp}>XP: {userData.xp}</Text>
 
@@ -94,9 +129,20 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
           ))}
         </View>
+
+        {/* 🔥 Afegeixo el CALENDARI 🔥 */}
+        <Text style={styles.sectionTitle}>Afegir activitats al teu calendari</Text>
+        <CalendarView
+          onDayPress={(day: DateData) => {
+            console.log('Data seleccionada:', day.dateString);
+            addEventToCalendar(day.dateString);
+          }}          
+          style={styles.calendar}
+        />
+
       </ScrollView>
 
-      {/* Barra de navegación inferior */}
+      {/* Barra de navegació inferior */}
       <View style={styles.bottomNav}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Ionicons name="home" size={26} color="white" />
@@ -125,13 +171,12 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingBottom: 100,
+    paddingBottom: 150, // per no tapar el calendari amb la barra
   },
   headerImage: {
     width: '100%',
     height: 250,
     resizeMode: 'cover',
-    position: 'relative',
   },
   avatar: {
     width: 120,
@@ -161,6 +206,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 20,
     marginBottom: 10,
+    marginTop: 20,
   },
   filmList: {
     flexDirection: 'row',
@@ -207,12 +253,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  calendar: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
 });
 
