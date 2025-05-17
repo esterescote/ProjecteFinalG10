@@ -44,11 +44,38 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     const getCalendarPermission = async () => {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
       if (status === 'granted') {
-        const calendars = await Calendar.getCalendarsAsync();
-        const defaultCalendar = calendars.find(c => c.allowsModifications);
-        if (defaultCalendar) {
-          setCalendarId(defaultCalendar.id);
-        }
+        const getCalendarPermission = async () => {
+          const { status } = await Calendar.requestCalendarPermissionsAsync();
+          if (status === 'granted') {
+            const calendars = await Calendar.getCalendarsAsync();
+            let defaultCalendar = calendars.find(c => c.allowsModifications);
+        
+            if (!defaultCalendar) {
+              const newCalendarId = await Calendar.createCalendarAsync({
+                title: 'Reptes App Calendar',
+                color: '#FFDD95',
+                entityType: Calendar.EntityTypes.EVENT,
+                source: Platform.OS === 'ios' 
+                  ? await getDefaultIOSCalendarSource()
+                  : { isLocalAccount: true, name: 'Reptes Calendar', type: Calendar.SourceType.LOCAL },
+                name: 'Reptes Calendar',
+                accessLevel: Calendar.CalendarAccessLevel.OWNER,
+                ownerAccount: 'personal',
+              });
+              setCalendarId(newCalendarId);
+            } else {
+              setCalendarId(defaultCalendar.id);
+            }
+          } else {
+            Alert.alert('Permís denegat', 'No podem accedir al teu calendari.');
+          }
+        };
+        
+        const getDefaultIOSCalendarSource = async () => {
+          const defaultCalendar = await Calendar.getDefaultCalendarAsync();
+          return defaultCalendar.source;
+        };
+        
       } else {
         Alert.alert('Permís denegat', 'No podem accedir al teu calendari.');
       }
