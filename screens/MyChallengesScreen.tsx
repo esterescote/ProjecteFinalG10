@@ -31,7 +31,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
   const [activeTab, setActiveTab] = useState<'current' | 'completed'>('current');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [userChallenges, setUserChallenges] = useState<
-    { id: string; name: string; progress?: number; title?: string }[]
+    { id: string; name: string; status: number }[]
   >([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +46,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
 
   const recommendedChallenges = [
     'Monthly Challenge',
-    'Inside Out marathoon',
+    'Inside Out marathon',
     '15 days non-stop.',
     'Non-Stop in 24 Hours',
     'Cine-Bingo',
@@ -56,17 +56,14 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
   useEffect(() => {
     const fetchUserChallenges = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('user_challenges').select('id, name, status');
+      const { data, error } = await supabase
+        .from('user_challenges')
+        .select('id, name, status');
       if (error) {
         console.log('Error fetching challenges:', error);
       } else {
-        // Perquè el swiper funcioni, afegeixo progress i title (pots adaptar segons dades reals)
-        const challengesWithProgress = (data || []).map((item) => ({
-  id: item.id,
-  name: item.name,
-  status: item.status,
-}));
-        setUserChallenges(challengesWithProgress);
+        // status ja és un número entre 0 i 1, que indica el progrés
+        setUserChallenges(data || []);
       }
       setLoading(false);
     };
@@ -104,9 +101,13 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
 
         {activeTab === 'current' ? (
           loading ? (
-            <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>Loading challenges...</Text>
+            <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>
+              Loading challenges...
+            </Text>
           ) : userChallenges.length === 0 ? (
-            <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>No current challenges found.</Text>
+            <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>
+              No current challenges found.
+            </Text>
           ) : (
             <ScrollView
               contentContainerStyle={styles.currentScrollContainer}
@@ -123,7 +124,12 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
                         <Text style={styles.cardTitle}>{card.name}</Text>
                         <Text style={styles.cardProgressLabel}>Completed:</Text>
                         <View style={styles.progressBar}>
-                          <View style={[styles.progress, { width: `${(card.progress || 0) * 100}%` }]} />
+                          <View
+                            style={[
+                              styles.progress,
+                              { width: `${Math.min(card.status * 100, 100)}%` },
+                            ]}
+                          />
                         </View>
                       </View>
                     </View>
