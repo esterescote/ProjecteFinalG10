@@ -68,48 +68,65 @@ const ChallengeDetailsScreen: React.FC = () => {
   };
 
   const fetchWatchedMovies = async (challengeId: string) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    if (!user) return;
+  if (!user) return;
 
-    const { data, error } = await supabase
-      .from('watched_movies')
-      .select('movie_id')
-      .eq('user_id', user.id)
-      .eq('challenge_id', challengeId);
+  const { data, error } = await supabase
+    .from('watched_movies')
+    .select('tmdb_movie_id')
+    .eq('user_id', user.id)
+    .eq('challenge_id', challengeId);
 
-    if (!error && data) {
-      setWatchedMovies(data.map((entry) => entry.movie_id));
-    }
-  };
+  if (!error && data) {
+    setWatchedMovies(data.map((entry) => entry.tmdb_movie_id));
+  }
+};
 
-  const toggleWatched = async (movieId: number) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !id) return;
 
-    const isWatched = watchedMovies.includes(movieId);
+const toggleWatched = async (tmdbMovieId: number) => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
+  if (!user || !id) return;
+
+  const isWatched = watchedMovies.includes(tmdbMovieId);
+
+  try {
     if (isWatched) {
-      await supabase
+      // Esborrem per user, challenge i tmdb_movie_id
+      const { error } = await supabase
         .from('watched_movies')
         .delete()
         .eq('user_id', user.id)
         .eq('challenge_id', id)
-        .eq('movie_id', movieId);
+        .eq('tmdb_movie_id', tmdbMovieId);
 
-      setWatchedMovies((prev) => prev.filter((mid) => mid !== movieId));
+      if (error) throw error;
+
+      setWatchedMovies((prev) => prev.filter((mid) => mid !== tmdbMovieId));
     } else {
-      await supabase
+      // Inserim només user_id, challenge_id i tmdb_movie_id, movie_id es genera automàticament
+      const { error } = await supabase
         .from('watched_movies')
-        .insert({ user_id: user.id, challenge_id: id, movie_id: movieId });
+        .insert({
+          user_id: user.id,
+          challenge_id: id,
+          tmdb_movie_id: tmdbMovieId,
+        });
 
-      setWatchedMovies((prev) => [...prev, movieId]);
+      if (error) throw error;
+
+      setWatchedMovies((prev) => [...prev, tmdbMovieId]);
     }
-  };
+  } catch (error) {
+    console.error('Error toggling watched movie:', error);
+  }
+};
+
 
   const fetchMoviesFromTMDB = async (movieIds: number[]) => {
     setLoadingMovies(true);
