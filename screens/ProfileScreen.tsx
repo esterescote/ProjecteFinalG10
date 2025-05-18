@@ -1,15 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Platform, Alert } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+  Modal,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
 import * as Calendar from 'expo-calendar';
 import { Calendar as CalendarView, DateData } from 'react-native-calendars';
 
-/**
- * Tipus de navegació
- */
+/** TYPES */
 type RootStackParamList = {
   Home: undefined;
   NewChallenges: undefined;
@@ -22,382 +31,160 @@ type ProfileScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 };
 
+/** CONSTANTS */
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 const defaultHeader = 'https://i.imgur.com/2yHBo8a.jpg';
+const IMG_REGEX = /^https?:\/\/.+\.(png|jpe?g|gif|webp|bmp)$/i;
 
+/** COMPONENT */
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
-  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [calendarId, setCalendarId] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [headerUrl, setHeaderUrl] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ open: boolean; column: 'profile_picture' | 'header_picture' }>({ open: false, column: 'profile_picture' });
+  const [link, setLink] = useState('');
 
-  /**
-   * ────────────────────────────────────────────────────────────────────────────────
-   * INICIALITZACIÓ
-   * ────────────────────────────────────────────────────────────────────────────────
-   */
+  /** INIT */
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setUser(user);
-        setAvatarUrl(user.user_metadata?.avatar_url || null);
-        setHeaderUrl(user.user_metadata?.header_url || null);
-      } else {
-        console.log('Usuari no autenticat:', error?.message);
-      }
-      setLoading(false);
-    };
-
-    /** Calendar permission  */
-    const getCalendarPermission = async () => {
-      const { status } = await Calendar.requestCalendarPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permís denegat', 'No podem accedir al teu calendari.');
-        return;
-      }
-      const calendars = await Calendar.getCalendarsAsync();
-      let editable = calendars.find(c => c.allowsModifications);
-      if (!editable) {
-        const newCalendarId = await Calendar.createCalendarAsync({
-          title: 'Reptes App Calendar',
-          color: '#FFDD95',
-          entityType: Calendar.EntityTypes.EVENT,
-          source: Platform.OS === 'ios'
-            ? (await Calendar.getDefaultCalendarAsync()).source
-            : { isLocalAccount: true, name: 'Reptes Calendar', type: Calendar.SourceType.LOCAL },
-          name: 'Reptes Calendar',
-          accessLevel: Calendar.CalendarAccessLevel.OWNER,
-          ownerAccount: 'personal',
-        });
-        setCalendarId(newCalendarId);
-      } else {
-        setCalendarId(editable.id);
-      }
-    };
-
-    getCalendarPermission();
-    fetchUser();
+    (async () => {
+      await loadProfile();
+      await ensureCalendar();
+    })();
   }, []);
 
-  /**
-   * ────────────────────────────────────────────────────────────────────────────────
-   * FUNCIONS D'IMATGE
-   * ────────────────────────────────────────────────────────────────────────────────
-   */
-  const pickImageAndUpload = async (type: 'avatar' | 'header') => {
-    // Demana permís
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permís denegat', 'Cal permís per accedir a les fotos.');
-      return;
-    }
-
-    // Obrir galeria
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: type === 'avatar' ? [1, 1] : [16, 9],
-      quality: 0.7,
-    });
-
-    if (result.canceled) return;
-
-    const file = result.assets[0];
-    const path = `${user.id}/${type}-${Date.now()}.jpg`;
-
-    // Pujar a Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from('profile')
-      .upload(path, {
-        uri: file.uri,
-        type: 'image/jpeg',
-        name: path,
-      } as any,
-      { upsert: true });
-
-    if (uploadError) {
-      Alert.alert('Error', 'No s\'ha pogut pujar la imatge.');
-      return;
-    }
-
-    // Obtenir URL pública
+  /** Load current user row from profiles */
+  const loadProfile = async () => {
     const {
-      data: { publicUrl },
-    } = supabase.storage.from('profile').getPublicUrl(path);
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+    if (error || !session?.user) return setLoading(false);
 
-    // Guardar al perfil de l'usuari
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: type === 'avatar' ? { avatar_url: publicUrl } : { header_url: publicUrl },
+    const { data, error: dbErr } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    if (dbErr) console.log(dbErr.message);
+
+    setProfile(data);
+    setLoading(false);
+  };
+
+  /** Calendar permission */
+  const ensureCalendar = async () => {
+    const { status } = await Calendar.requestCalendarPermissionsAsync();
+    if (status !== 'granted') return;
+    const editable = (await Calendar.getCalendarsAsync()).find(c => c.allowsModifications);
+    if (editable) setCalendarId(editable.id);
+  };
+
+  /** Open modal */
+  const askForLink = (column: 'profile_picture' | 'header_picture') => {
+    setLink('');
+    setModal({ open: true, column });
+  };
+
+  /** Save link to DB */
+  const handleSave = async () => {
+    const url = link.trim();
+    if (!IMG_REGEX.test(url)) return Alert.alert('URL invàlida', 'L\'enllaç ha de ser una imatge (.png, .jpg, ...).');
+    if (!profile?.id) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [modal.column]: url })
+      .eq('id', profile.id)
+      .select(); // force PostgREST to return row → avoids RLS silently failing
+
+    if (error) {
+      console.log(error);
+      return Alert.alert('Error', 'No s\'ha pogut desar. Comprova permisos RLS.');
+    }
+
+    setProfile({ ...profile, [modal.column]: url });
+    setModal({ ...modal, open: false });
+  };
+
+  /** Calendar add */
+  const addEvent = async (date: string) => {
+    if (!calendarId) return;
+    await Calendar.createEventAsync(calendarId, {
+      title: 'Nova activitat de repte!',
+      startDate: new Date(date),
+      endDate: new Date(new Date(date).getTime() + 60 * 60 * 1000),
+      timeZone: 'GMT',
     });
-
-    if (updateError) {
-      Alert.alert('Error', 'No s\'ha pogut actualitzar el perfil.');
-      return;
-    }
-
-    type === 'avatar' ? setAvatarUrl(publicUrl) : setHeaderUrl(publicUrl);
-  };
-
-  /**
-   * ────────────────────────────────────────────────────────────────────────────────
-   * CALENDARI
-   * ────────────────────────────────────────────────────────────────────────────────
-   */
-  const addEventToCalendar = async (dateString: string) => {
-    if (!calendarId) {
-      Alert.alert('Error', 'No s\'ha trobat un calendari per defecte.');
-      return;
-    }
-
-    try {
-      await Calendar.createEventAsync(calendarId, {
-        title: 'Nova activitat de repte!',
-        startDate: new Date(dateString),
-        endDate: new Date(new Date(dateString).getTime() + 60 * 60 * 1000), // +1h
-        timeZone: 'GMT',
-        location: 'App de Reptes',
-      });
-      Alert.alert('Fet!', 'S\'ha afegit una activitat al teu calendari.');
-    } catch (error) {
-      console.log('Error afegint al calendari:', error);
-      Alert.alert('Error', 'No s\'ha pogut afegir l\'esdeveniment.');
-    }
-  };
-
-  /**
-   * ────────────────────────────────────────────────────────────────────────────────
-   * DADES MOCK (per eliminar quan hi hagi backend complet)
-   * ────────────────────────────────────────────────────────────────────────────────
-   */
-  const userData = {
-    username: user?.user_metadata?.username || 'John Doe',
-    xp: 1500,
-    favouriteFilms: [
-      { title: 'Inception', image: 'https://image.tmdb.org/t/p/w500/6V1bK1pEAT2k0i3GTLhxvDZjzQS.jpg' },
-      { title: 'The Matrix', image: 'https://image.tmdb.org/t/p/w500/4Y1cHLZ3vbs4lG5Xfsk9E3tMQQR.jpg' },
-    ],
-    currentChallenge: [
-      { title: 'Challenge 1', image: 'https://cdn.hobbyconsolas.com/sites/navi.axelspringer.es/public/media/image/2016/09/pulp-fiction.jpg?tf=3840x' },
-      { title: 'Challenge 2', image: 'https://www.eyeforfilm.co.uk/images/newsite/the-shawshank-redemption_600.webp' },
-    ],
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#800000" />
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  /**
-   * ────────────────────────────────────────────────────────────────────────────────
-   * RENDER
-   * ────────────────────────────────────────────────────────────────────────────────
-   */
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Header Image */}
-        <TouchableOpacity activeOpacity={0.8} onPress={() => pickImageAndUpload('header')}>
-          <Image source={{ uri: headerUrl || defaultHeader }} style={styles.headerImage} />
-          <Ionicons name="camera" size={28} color="#fff" style={styles.headerIcon} />
+      {/* Modal */}
+      <Modal transparent visible={modal.open} animationType="fade" onRequestClose={() => setModal({ ...modal, open: false })}>
+        <View style={styles.backdrop}>
+          <View style={styles.modalBox}>
+            <Text style={styles.title}>Enganxa l\'enllaç de la imatge</Text>
+            <TextInput placeholder="https://..." value={link} onChangeText={setLink} style={styles.input} autoCapitalize="none" />
+            <View style={styles.rowEnd}>
+              <TouchableOpacity onPress={() => setModal({ ...modal, open: false })} style={styles.btn}><Text>Cancel·la</Text></TouchableOpacity>
+              <TouchableOpacity onPress={handleSave} style={styles.btn}><Text>Desa</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <ScrollView contentContainerStyle={styles.scroll}>
+        {/* Header */}
+        <TouchableOpacity onPress={() => askForLink('header_picture')}>
+          <Image source={{ uri: profile?.header_picture || defaultHeader }} style={styles.headerImg} />
+          <Ionicons name="link" size={26} color="#fff" style={styles.iconHeader} />
         </TouchableOpacity>
 
         {/* Avatar */}
-        <TouchableOpacity
-          style={styles.avatarWrapper}
-          activeOpacity={0.8}
-          onPress={() => pickImageAndUpload('avatar')}
-        >
-          <Image source={{ uri: avatarUrl || defaultAvatar }} style={styles.avatar} />
-          <Ionicons name="camera" size={24} color="#fff" style={styles.avatarIcon} />
+        <TouchableOpacity style={styles.avatarWrapper} onPress={() => askForLink('profile_picture')}>
+          <Image source={{ uri: profile?.profile_picture || defaultAvatar }} style={styles.avatar} />
+          <Ionicons name="link" size={22} color="#fff" style={styles.avatarIcon} />
         </TouchableOpacity>
 
-        {/* Username & XP */}
-        <Text style={styles.username}>{userData.username}</Text>
-        <Text style={styles.xp}>XP: {userData.xp}</Text>
+        <Text style={styles.username}>{profile?.username ?? 'John Doe'}</Text>
+        <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
-        {/* Favourite Films */}
-        <Text style={styles.sectionTitle}>Pel·lícules preferides</Text>
-        <View style={styles.filmList}>
-          {userData.favouriteFilms.map((film, index) => (
-            <View key={index} style={styles.filmCard}>
-              <Image source={{ uri: film.image }} style={styles.filmImage} />
-              <Text style={styles.filmTitle}>{film.title}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Current Challenge */}
-        <Text style={styles.sectionTitle}>Repte actual</Text>
-        <View style={styles.challengeList}>
-          {userData.currentChallenge.map((challenge, index) => (
-            <View key={index} style={styles.challengeCard}>
-              <Image source={{ uri: challenge.image }} style={styles.challengeImage} />
-              <Text style={styles.challengeTitle}>{challenge.title}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Calendari */}
-        <Text style={styles.sectionTitle}>Afegir activitats al teu calendari</Text>
-        <CalendarView
-          onDayPress={(day: DateData) => addEventToCalendar(day.dateString)}
-          style={styles.calendar}
-        />
+        <Text style={styles.section}>Calendari</Text>
+        <CalendarView onDayPress={(d: DateData) => addEvent(d.dateString)} style={styles.calendar} />
       </ScrollView>
-
-      {/* Barra de navegació inferior */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
-          <Ionicons name="home" size={26} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')}>
-          <Ionicons name="calendar" size={26} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')}>
-          <Ionicons name="add-circle" size={30} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Progress')}>
-          <Ionicons name="trophy" size={26} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Ionicons name="person" size={26} color="#FFDD95" />
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
 
-/**
- * ────────────────────────────────────────────────────────────────────────────────
- * ESTILS
- * ────────────────────────────────────────────────────────────────────────────────
- */
+/** styles */
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: 150,
-  },
-  headerImage: {
-    width: '100%',
-    height: 250,
-    resizeMode: 'cover',
-  },
-  headerIcon: {
-    position: 'absolute',
-    right: 15,
-    bottom: 15,
-  },
-  avatarWrapper: {
-    position: 'absolute',
-    top: 150,
-    left: '50%',
-    marginLeft: -60,
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: '#fff',
-  },
-  avatarIcon: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-  },
-  username: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 90,
-  },
-  xp: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#888',
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 20,
-    marginBottom: 10,
-    marginTop: 20,
-  },
-  filmList: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    marginHorizontal: 20,
-  },
-  filmCard: {
-    marginRight: 15,
-    alignItems: 'center',
-  },
-  filmImage: {
-    width: 100,
-    height: 150,
-    borderRadius: 10,
-  },
-  filmTitle: {
-    marginTop: 5,
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  challengeList: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    marginHorizontal: 20,
-  },
-  challengeCard: {
-    marginRight: 15,
-    alignItems: 'center',
-  },
-  challengeImage: {
-    width: 100,
-    height: 150,
-    borderRadius: 10,
-  },
-  challengeTitle: {
-    marginTop: 5,
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#2b2323',
-    paddingVertical: 12,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calendar: {
-    marginHorizontal: 20,
-    marginTop: 10,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
+  safeArea: { flex: 1, backgroundColor: '#fff' },
+  scroll: { flexGrow: 1, paddingBottom: 100 },
+  headerImg: { width: '100%', height: 250, resizeMode: 'cover' },
+  iconHeader: { position: 'absolute', right: 15, bottom: 15 },
+  avatarWrapper: { position: 'absolute', top: 150, left: '50%', marginLeft: -60 },
+  avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, borderColor: '#fff' },
+  avatarIcon: { position: 'absolute', right: 0, bottom: 0 },
+  username: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginTop: 90 },
+  xp: { textAlign: 'center', color: '#666' },
+  section: { fontSize: 18, margin: 20 },
+  calendar: { marginHorizontal: 20 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  /* modal */
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalBox: { width: '80%', backgroundColor: '#fff', padding: 20, borderRadius: 12 },
+  title: { fontSize: 16, marginBottom: 10 },
+  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 8, marginBottom: 15 },
+  rowEnd: { flexDirection: 'row', justifyContent: 'flex-end' },
+  btn: { marginLeft: 15 },
 });
 
 export default ProfileScreen;
