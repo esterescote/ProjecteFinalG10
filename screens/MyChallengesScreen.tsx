@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
+import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -29,12 +30,12 @@ type MyChallengesScreenProps = {
 const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState<'current' | 'completed'>('current');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [challenges] = useState([
-    { id: '1', title: 'Harry Potter Marathon', progress: 0.5 },
-    { id: '2', title: 'Marvel Cinematic Universe', progress: 0.3 },
-    { id: '3', title: 'Disney Classics', progress: 0.8 },
-  ]);
+  const [userChallenges, setUserChallenges] = useState<
+    { id: string; name: string; progress?: number; title?: string }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
 
+  // Exemple de reptes completats (fixos)
   const completedChallenges = [
     { title: 'Marvel Marathon', xp: 15 },
     { title: 'The Oscar Winners Challenge', xp: 5 },
@@ -42,6 +43,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
   ];
 
   const categories = ['All', 'Action', 'Adventure', 'Animation', 'Horror'];
+
   const recommendedChallenges = [
     'Monthly Challenge',
     'Inside Out marathoon',
@@ -50,6 +52,26 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
     'Cine-Bingo',
     'Beep Challenge',
   ];
+
+  useEffect(() => {
+    const fetchUserChallenges = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from('user_challenges').select('id, name');
+      if (error) {
+        console.log('Error fetching challenges:', error);
+      } else {
+        // Perquè el swiper funcioni, afegeixo progress i title (pots adaptar segons dades reals)
+        const challengesWithProgress = (data || []).map((item) => ({
+  id: item.id,
+  name: item.name,
+  progress: 0.5,
+}));
+        setUserChallenges(challengesWithProgress);
+      }
+      setLoading(false);
+    };
+    fetchUserChallenges();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -81,36 +103,42 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
         </View>
 
         {activeTab === 'current' ? (
-          <ScrollView
-            contentContainerStyle={styles.currentScrollContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.swiperContainerSmall}>
-              <Swiper
-                cards={challenges}
-                renderCard={(card) => (
-                  <View style={styles.cardSmall}>
-                    <View style={styles.imagePlaceholder} />
-                    <View style={styles.cardContentSmall}>
-                      <Text style={styles.cardLabel}>Challenge</Text>
-                      <Text style={styles.cardTitle}>{card.title}</Text>
-                      <Text style={styles.cardProgressLabel}>Completed:</Text>
-                      <View style={styles.progressBar}>
-                        <View style={[styles.progress, { width: `${card.progress * 100}%` }]} />
+          loading ? (
+            <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>Loading challenges...</Text>
+          ) : userChallenges.length === 0 ? (
+            <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>No current challenges found.</Text>
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.currentScrollContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.swiperContainerSmall}>
+                <Swiper
+                  cards={userChallenges}
+                  renderCard={(card) => (
+                    <View style={styles.cardSmall} key={card.id}>
+                      <View style={styles.imagePlaceholder} />
+                      <View style={styles.cardContentSmall}>
+                        <Text style={styles.cardLabel}>Challenge</Text>
+                        <Text style={styles.cardTitle}>{card.name}</Text>
+                        <Text style={styles.cardProgressLabel}>Completed:</Text>
+                        <View style={styles.progressBar}>
+                          <View style={[styles.progress, { width: `${(card.progress || 0) * 100}%` }]} />
+                        </View>
                       </View>
                     </View>
-                  </View>
-                )}
-                backgroundColor="transparent"
-                cardIndex={0}
-                stackSize={2}
-                stackSeparation={10}
-                disableTopSwipe
-                disableBottomSwipe
-                infinite
-              />
-            </View>
-          </ScrollView>
+                  )}
+                  backgroundColor="transparent"
+                  cardIndex={0}
+                  stackSize={2}
+                  stackSeparation={10}
+                  disableTopSwipe
+                  disableBottomSwipe
+                  infinite
+                />
+              </View>
+            </ScrollView>
+          )
         ) : (
           <ScrollView
             contentContainerStyle={styles.completedContainer}
@@ -132,10 +160,16 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
                   <TouchableOpacity
                     key={category}
                     onPress={() => setSelectedCategory(category)}
-                    style={[styles.categoryButton, selectedCategory === category && styles.activeCategoryButton]}
+                    style={[
+                      styles.categoryButton,
+                      selectedCategory === category && styles.activeCategoryButton,
+                    ]}
                   >
                     <Text
-                      style={[styles.categoryText, selectedCategory === category && styles.activeCategoryText]}
+                      style={[
+                        styles.categoryText,
+                        selectedCategory === category && styles.activeCategoryText,
+                      ]}
                     >
                       {category}
                     </Text>
@@ -292,133 +326,136 @@ const styles = StyleSheet.create({
   },
   cardLabel: { color: '#ccc', fontSize: 14 },
   cardTitle: { color: 'white', fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
-  cardProgressLabel: { color: '#ccc', fontSize: 14, marginTop: 10 },
-  progressBar: {
-    width: '100%',
-    height: 8,
-    backgroundColor: '#444',
-    borderRadius: 5,
-    overflow: 'hidden',
-    marginTop: 5,
-  },
-  progress: { height: 8, backgroundColor: 'green' },
-
-  completedContainer: {
-    paddingBottom: 60,
-    paddingTop: 20,
-  },
-  sectionTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    paddingHorizontal: 15,
-    marginTop: 15,
-    marginBottom: 5,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: 'white',
-    marginHorizontal: 15,
-    marginBottom: 10,
-  },
-  horizontalScroll: {
-    paddingHorizontal: 10,
-  },
-  completedCardsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    paddingLeft: 10,
-  },
-  completedCardSmall: {
-    backgroundColor: '#800020',
-    borderRadius: 10,
-    padding: 10,
-    marginRight: 10,
-    width: width * 0.35,
-    height: height * 0.15,
-  },
-  completedCardText: {
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  xpTag: {
-    marginTop: 5,
-    backgroundColor: '#000',
-    borderRadius: 10,
-    paddingVertical: 5,
-    alignItems: 'center',
-  },
-  xpText: {
-    color: 'white',
-    fontSize: 12,
-  },
-  keepGoing: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 25,
-  },
-  recommendCard: {
-    backgroundColor: '#5e0b0b',
-    borderRadius: 12,
-    padding: 15,
-    marginRight: 10,
-    width: width * 0.4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  recommendText: {
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  footerButtons: {
-    marginTop: 30,
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  footerButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  categoryButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    marginRight: 8,
-  },
-  activeCategoryButton: {
-    backgroundColor: '#000',
-  },
-  categoryText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  activeCategoryText: {
-    color: '#fff',
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#2b2323',
-    paddingVertical: 12,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    width: '100%',
-  },
+cardProgressLabel: {
+color: '#ccc',
+fontSize: 14,
+marginTop: 10,
+alignSelf: 'flex-start',
+},
+progressBar: {
+height: 10,
+backgroundColor: '#444',
+borderRadius: 20,
+width: '100%',
+marginTop: 5,
+},
+progress: {
+height: '100%',
+backgroundColor: '#FFDD95',
+borderRadius: 20,
+},
+completedContainer: {
+paddingHorizontal: 15,
+paddingBottom: 30,
+},
+categoryButton: {
+paddingVertical: 8,
+paddingHorizontal: 15,
+marginHorizontal: 5,
+borderRadius: 20,
+backgroundColor: 'rgba(255, 255, 255, 0.2)',
+},
+activeCategoryButton: {
+backgroundColor: '#FFDD95',
+},
+categoryText: {
+color: 'white',
+fontWeight: '600',
+},
+activeCategoryText: {
+color: '#1e1e1e',
+},
+sectionTitle: {
+color: 'white',
+fontSize: 18,
+fontWeight: 'bold',
+marginTop: 10,
+},
+separator: {
+borderBottomColor: '#FFDD95',
+borderBottomWidth: 1,
+marginVertical: 5,
+},
+horizontalScroll: {
+marginTop: 10,
+},
+completedCardSmall: {
+width: 180,
+height: 80,
+backgroundColor: '#2a2a2a',
+borderRadius: 10,
+marginRight: 10,
+padding: 10,
+justifyContent: 'center',
+},
+completedCardText: {
+color: 'white',
+fontWeight: 'bold',
+fontSize: 16,
+},
+xpTag: {
+marginTop: 5,
+backgroundColor: '#FFDD95',
+paddingVertical: 3,
+paddingHorizontal: 7,
+borderRadius: 15,
+alignSelf: 'flex-start',
+},
+xpText: {
+fontWeight: 'bold',
+fontSize: 14,
+},
+keepGoing: {
+color: 'white',
+fontSize: 16,
+fontWeight: 'bold',
+marginVertical: 15,
+},
+completedCardsContainer: {
+justifyContent: 'center',
+alignItems: 'center',
+flexDirection: 'row',
+width: '100%',
+},
+recommendCard: {
+width: 180,
+height: 100,
+backgroundColor: '#2a2a2a',
+borderRadius: 10,
+marginRight: 10,
+justifyContent: 'center',
+alignItems: 'center',
+paddingHorizontal: 10,
+},
+recommendText: {
+color: 'white',
+fontWeight: 'bold',
+fontSize: 16,
+textAlign: 'center',
+},
+footerButtons: {
+flexDirection: 'row',
+justifyContent: 'space-around',
+marginTop: 20,
+},
+footerButton: {
+backgroundColor: '#FFDD95',
+borderRadius: 25,
+paddingVertical: 10,
+paddingHorizontal: 20,
+},
+footerButtonText: {
+color: '#1e1e1e',
+fontWeight: 'bold',
+fontSize: 14,
+},
+bottomNav: {
+height: 60,
+backgroundColor: '#1e1e1e',
+flexDirection: 'row',
+justifyContent: 'space-around',
+alignItems: 'center',
+},
 });
 
 export default MyChallengesScreen;

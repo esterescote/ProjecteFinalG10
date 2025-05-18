@@ -9,21 +9,20 @@ import {
   Modal,
   SafeAreaView,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';  // Importa la tipologia per a la navegació
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useRouter } from 'expo-router';
 
-// Defineix els tipus de les rutes
+// Tipus de navegació
 type RootStackParamList = {
   Home: undefined;
   MyChallenges: undefined;
   NewChallenges: undefined;
   Progress: undefined;
   Profile: undefined;
-  'challenge-details': { id: string };  // Si tens una pantalla amb paràmetres
+  'challenge-details': { id: string };
 };
 
 type Challenge = {
@@ -39,8 +38,7 @@ const NewChallengesScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  
-  // Tipatge per a la navegació
+
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const router = useRouter();
 
@@ -56,50 +54,63 @@ const NewChallengesScreen: React.FC = () => {
   };
 
   const fetchChallenges = async (userId: string) => {
-    const { data, error } = await supabase.from('challenges').select('*');
-    if (error) {
-      console.error('Error loading challenges:', error.message);
-    } else {
-      const baseChallenges = data.map((challenge: any) => ({
-        ...challenge,
-        added: false,
-      }));
-      const finalChallenges = await applyStoredChallengeStatus(baseChallenges, userId);
-      setChallenges(finalChallenges);
+    const { data: challengeData, error: challengeError } = await supabase.from('challenges').select('*');
+    if (challengeError) {
+      console.error('Error loading challenges:', challengeError.message);
+      return;
     }
-  };
 
-  const applyStoredChallengeStatus = async (challenges: Challenge[], userId: string) => {
-    return await Promise.all(
-      challenges.map(async (challenge) => {
-        const status = await AsyncStorage.getItem(`${userId}_${challenge.id}`);
-        return { ...challenge, added: status === 'true' };
-      })
-    );
+    const { data: userChallenges, error: userChallengesError } = await supabase
+      .from('user_challenges')
+      .select('challenge_id')
+      .eq('user_id', userId);
+
+    if (userChallengesError) {
+      console.error('Error loading user challenges:', userChallengesError.message);
+      return;
+    }
+
+    const addedChallengeIds = userChallenges.map((uc) => uc.challenge_id);
+
+    const mergedChallenges = challengeData.map((challenge: any) => ({
+      ...challenge,
+      added: addedChallengeIds.includes(challenge.id),
+    }));
+
+    setChallenges(mergedChallenges);
   };
 
   const handleAddChallenge = async (challengeId: string) => {
-    if (!userId) return;
-    const { error } = await supabase.from('user_challenges').insert([{
-      user_id: userId,
-      challenge_id: challengeId,
-      status: 'pending',
-      start_date: new Date().toISOString(),
-      end_date: null,
-    }]);
+  if (!userId) return;
 
-    if (error) {
-      setMessage(`Error: ${error.message}`);
-    } else {
-      await AsyncStorage.setItem(`${userId}_${challengeId}`, 'true');
-      updateChallengeState(challengeId, true);
-      setMessage('Challenge added correctly!');
-    }
+  const challenge = challenges.find((c) => c.id === challengeId);
+  if (!challenge) {
+    setMessage('Challenge not found');
     setModalVisible(true);
-  };
+    return;
+  }
+
+  const { error } = await supabase.from('user_challenges').insert([{
+    user_id: userId,
+    challenge_id: challengeId,
+    name: challenge.name, // 👈 aquí afegeixes el nom
+    status: 'pending',
+    start_date: new Date().toISOString(),
+    end_date: null,
+  }]);
+
+  if (error) {
+    setMessage(`Error: ${error.message}`);
+  } else {
+    updateChallengeState(challengeId, true);
+    setMessage('Challenge added correctly!');
+  }
+  setModalVisible(true);
+};
 
   const handleRemoveChallenge = async (challengeId: string) => {
     if (!userId) return;
+
     const { error } = await supabase
       .from('user_challenges')
       .delete()
@@ -109,7 +120,6 @@ const NewChallengesScreen: React.FC = () => {
     if (error) {
       setMessage(`Error: ${error.message}`);
     } else {
-      await AsyncStorage.removeItem(`${userId}_${challengeId}`);
       updateChallengeState(challengeId, false);
       setMessage('Challenge removed.');
     }
@@ -192,7 +202,6 @@ const NewChallengesScreen: React.FC = () => {
         </Modal>
       </View>
 
-      {/* Barra inferior funcional */}
       <View style={styles.bottomNav}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Ionicons name="home" size={26} color="white" />
