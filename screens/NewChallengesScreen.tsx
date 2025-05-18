@@ -94,7 +94,7 @@ const NewChallengesScreen: React.FC = () => {
     user_id: userId,
     challenge_id: challengeId,
     name: challenge.name, // 👈 aquí afegeixes el nom
-    status: 'pending',
+    status: 0,
     start_date: new Date().toISOString(),
     end_date: null,
   }]);

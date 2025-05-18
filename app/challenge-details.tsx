@@ -85,7 +85,6 @@ const ChallengeDetailsScreen: React.FC = () => {
   }
 };
 
-
 const toggleWatched = async (tmdbMovieId: number) => {
   const {
     data: { user },
@@ -97,7 +96,6 @@ const toggleWatched = async (tmdbMovieId: number) => {
 
   try {
     if (isWatched) {
-      // Esborrem per user, challenge i tmdb_movie_id
       const { error } = await supabase
         .from('watched_movies')
         .delete()
@@ -108,22 +106,36 @@ const toggleWatched = async (tmdbMovieId: number) => {
       if (error) throw error;
 
       setWatchedMovies((prev) => prev.filter((mid) => mid !== tmdbMovieId));
+
+      // 🔻 També restem 1 al status del repte
+      await supabase.rpc('decrement_challenge_status', {
+        user_id_input: user.id,
+        challenge_id_input: id,
+      });
+
     } else {
-      // Inserim només user_id, challenge_id i tmdb_movie_id, movie_id es genera automàticament
       const { error } = await supabase
         .from('watched_movies')
-        .insert({
-          user_id: user.id,
-          challenge_id: id,
-          tmdb_movie_id: tmdbMovieId,
-        });
+        .insert([
+          {
+            user_id: user.id,
+            challenge_id: id,
+            tmdb_movie_id: tmdbMovieId,
+          },
+        ]);
 
       if (error) throw error;
 
       setWatchedMovies((prev) => [...prev, tmdbMovieId]);
+
+      // 🔺 Sumem 1 al status del repte
+      await supabase.rpc('increment_challenge_status', {
+        user_id_input: user.id,
+        challenge_id_input: id,
+      });
     }
   } catch (error) {
-    console.error('Error toggling watched movie:', error);
+    console.error('Error toggling watched status:', error);
   }
 };
 

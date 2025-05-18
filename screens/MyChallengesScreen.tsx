@@ -56,7 +56,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
   useEffect(() => {
     const fetchUserChallenges = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('user_challenges').select('id, name');
+      const { data, error } = await supabase.from('user_challenges').select('id, name, status');
       if (error) {
         console.log('Error fetching challenges:', error);
       } else {
@@ -64,7 +64,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
         const challengesWithProgress = (data || []).map((item) => ({
   id: item.id,
   name: item.name,
-  progress: 0.5,
+  status: item.status,
 }));
         setUserChallenges(challengesWithProgress);
       }
