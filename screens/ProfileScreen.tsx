@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Button, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Platform, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
 import * as Calendar from 'expo-calendar';
 import { Calendar as CalendarView, DateData } from 'react-native-calendars';
 
-
+/**
+ * Tipus de navegació
+ */
 type RootStackParamList = {
   Home: undefined;
   NewChallenges: undefined;
@@ -20,12 +23,20 @@ type ProfileScreenProps = {
 };
 
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
+const defaultHeader = 'https://i.imgur.com/2yHBo8a.jpg';
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [calendarId, setCalendarId] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [headerUrl, setHeaderUrl] = useState<string | null>(null);
 
+  /**
+   * ────────────────────────────────────────────────────────────────────────────────
+   * INICIALITZACIÓ
+   * ────────────────────────────────────────────────────────────────────────────────
+   */
   useEffect(() => {
     const fetchUser = async () => {
       const {
@@ -35,49 +46,38 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
       if (user) {
         setUser(user);
+        setAvatarUrl(user.user_metadata?.avatar_url || null);
+        setHeaderUrl(user.user_metadata?.header_url || null);
       } else {
-        console.log('Usuario no autenticado:', error?.message);
+        console.log('Usuari no autenticat:', error?.message);
       }
       setLoading(false);
     };
 
+    /** Calendar permission  */
     const getCalendarPermission = async () => {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
-      if (status === 'granted') {
-        const getCalendarPermission = async () => {
-          const { status } = await Calendar.requestCalendarPermissionsAsync();
-          if (status === 'granted') {
-            const calendars = await Calendar.getCalendarsAsync();
-            let defaultCalendar = calendars.find(c => c.allowsModifications);
-        
-            if (!defaultCalendar) {
-              const newCalendarId = await Calendar.createCalendarAsync({
-                title: 'Reptes App Calendar',
-                color: '#FFDD95',
-                entityType: Calendar.EntityTypes.EVENT,
-                source: Platform.OS === 'ios' 
-                  ? await getDefaultIOSCalendarSource()
-                  : { isLocalAccount: true, name: 'Reptes Calendar', type: Calendar.SourceType.LOCAL },
-                name: 'Reptes Calendar',
-                accessLevel: Calendar.CalendarAccessLevel.OWNER,
-                ownerAccount: 'personal',
-              });
-              setCalendarId(newCalendarId);
-            } else {
-              setCalendarId(defaultCalendar.id);
-            }
-          } else {
-            Alert.alert('Permís denegat', 'No podem accedir al teu calendari.');
-          }
-        };
-        
-        const getDefaultIOSCalendarSource = async () => {
-          const defaultCalendar = await Calendar.getDefaultCalendarAsync();
-          return defaultCalendar.source;
-        };
-        
-      } else {
+      if (status !== 'granted') {
         Alert.alert('Permís denegat', 'No podem accedir al teu calendari.');
+        return;
+      }
+      const calendars = await Calendar.getCalendarsAsync();
+      let editable = calendars.find(c => c.allowsModifications);
+      if (!editable) {
+        const newCalendarId = await Calendar.createCalendarAsync({
+          title: 'Reptes App Calendar',
+          color: '#FFDD95',
+          entityType: Calendar.EntityTypes.EVENT,
+          source: Platform.OS === 'ios'
+            ? (await Calendar.getDefaultCalendarAsync()).source
+            : { isLocalAccount: true, name: 'Reptes Calendar', type: Calendar.SourceType.LOCAL },
+          name: 'Reptes Calendar',
+          accessLevel: Calendar.CalendarAccessLevel.OWNER,
+          ownerAccount: 'personal',
+        });
+        setCalendarId(newCalendarId);
+      } else {
+        setCalendarId(editable.id);
       }
     };
 
@@ -85,6 +85,70 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     fetchUser();
   }, []);
 
+  /**
+   * ────────────────────────────────────────────────────────────────────────────────
+   * FUNCIONS D'IMATGE
+   * ────────────────────────────────────────────────────────────────────────────────
+   */
+  const pickImageAndUpload = async (type: 'avatar' | 'header') => {
+    // Demana permís
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permís denegat', 'Cal permís per accedir a les fotos.');
+      return;
+    }
+
+    // Obrir galeria
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: type === 'avatar' ? [1, 1] : [16, 9],
+      quality: 0.7,
+    });
+
+    if (result.canceled) return;
+
+    const file = result.assets[0];
+    const path = `${user.id}/${type}-${Date.now()}.jpg`;
+
+    // Pujar a Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('profile')
+      .upload(path, {
+        uri: file.uri,
+        type: 'image/jpeg',
+        name: path,
+      } as any,
+      { upsert: true });
+
+    if (uploadError) {
+      Alert.alert('Error', 'No s\'ha pogut pujar la imatge.');
+      return;
+    }
+
+    // Obtenir URL pública
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('profile').getPublicUrl(path);
+
+    // Guardar al perfil de l'usuari
+    const { error: updateError } = await supabase.auth.updateUser({
+      data: type === 'avatar' ? { avatar_url: publicUrl } : { header_url: publicUrl },
+    });
+
+    if (updateError) {
+      Alert.alert('Error', 'No s\'ha pogut actualitzar el perfil.');
+      return;
+    }
+
+    type === 'avatar' ? setAvatarUrl(publicUrl) : setHeaderUrl(publicUrl);
+  };
+
+  /**
+   * ────────────────────────────────────────────────────────────────────────────────
+   * CALENDARI
+   * ────────────────────────────────────────────────────────────────────────────────
+   */
   const addEventToCalendar = async (dateString: string) => {
     if (!calendarId) {
       Alert.alert('Error', 'No s\'ha trobat un calendari per defecte.');
@@ -106,11 +170,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  /**
+   * ────────────────────────────────────────────────────────────────────────────────
+   * DADES MOCK (per eliminar quan hi hagi backend complet)
+   * ────────────────────────────────────────────────────────────────────────────────
+   */
   const userData = {
     username: user?.user_metadata?.username || 'John Doe',
     xp: 1500,
-    avatar: user?.user_metadata?.avatar_url || null,
-    headerImage: 'https://i.imgur.com/2yHBo8a.jpg',
     favouriteFilms: [
       { title: 'Inception', image: 'https://image.tmdb.org/t/p/w500/6V1bK1pEAT2k0i3GTLhxvDZjzQS.jpg' },
       { title: 'The Matrix', image: 'https://image.tmdb.org/t/p/w500/4Y1cHLZ3vbs4lG5Xfsk9E3tMQQR.jpg' },
@@ -129,15 +196,36 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     );
   }
 
+  /**
+   * ────────────────────────────────────────────────────────────────────────────────
+   * RENDER
+   * ────────────────────────────────────────────────────────────────────────────────
+   */
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Image source={{ uri: userData.headerImage }} style={styles.headerImage} />
-        <Image source={{ uri: userData.avatar || defaultAvatar }} style={styles.avatar} />
+        {/* Header Image */}
+        <TouchableOpacity activeOpacity={0.8} onPress={() => pickImageAndUpload('header')}>
+          <Image source={{ uri: headerUrl || defaultHeader }} style={styles.headerImage} />
+          <Ionicons name="camera" size={28} color="#fff" style={styles.headerIcon} />
+        </TouchableOpacity>
+
+        {/* Avatar */}
+        <TouchableOpacity
+          style={styles.avatarWrapper}
+          activeOpacity={0.8}
+          onPress={() => pickImageAndUpload('avatar')}
+        >
+          <Image source={{ uri: avatarUrl || defaultAvatar }} style={styles.avatar} />
+          <Ionicons name="camera" size={24} color="#fff" style={styles.avatarIcon} />
+        </TouchableOpacity>
+
+        {/* Username & XP */}
         <Text style={styles.username}>{userData.username}</Text>
         <Text style={styles.xp}>XP: {userData.xp}</Text>
 
-        <Text style={styles.sectionTitle}>Favourite Films</Text>
+        {/* Favourite Films */}
+        <Text style={styles.sectionTitle}>Pel·lícules preferides</Text>
         <View style={styles.filmList}>
           {userData.favouriteFilms.map((film, index) => (
             <View key={index} style={styles.filmCard}>
@@ -147,7 +235,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Current Challenge</Text>
+        {/* Current Challenge */}
+        <Text style={styles.sectionTitle}>Repte actual</Text>
         <View style={styles.challengeList}>
           {userData.currentChallenge.map((challenge, index) => (
             <View key={index} style={styles.challengeCard}>
@@ -157,16 +246,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           ))}
         </View>
 
-        {/* 🔥 Afegeixo el CALENDARI 🔥 */}
+        {/* Calendari */}
         <Text style={styles.sectionTitle}>Afegir activitats al teu calendari</Text>
         <CalendarView
-          onDayPress={(day: DateData) => {
-            console.log('Data seleccionada:', day.dateString);
-            addEventToCalendar(day.dateString);
-          }}          
+          onDayPress={(day: DateData) => addEventToCalendar(day.dateString)}
           style={styles.calendar}
         />
-
       </ScrollView>
 
       {/* Barra de navegació inferior */}
@@ -191,6 +276,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   );
 };
 
+/**
+ * ────────────────────────────────────────────────────────────────────────────────
+ * ESTILS
+ * ────────────────────────────────────────────────────────────────────────────────
+ */
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -198,12 +288,23 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingBottom: 150, // per no tapar el calendari amb la barra
+    paddingBottom: 150,
   },
   headerImage: {
     width: '100%',
     height: 250,
     resizeMode: 'cover',
+  },
+  headerIcon: {
+    position: 'absolute',
+    right: 15,
+    bottom: 15,
+  },
+  avatarWrapper: {
+    position: 'absolute',
+    top: 150,
+    left: '50%',
+    marginLeft: -60,
   },
   avatar: {
     width: 120,
@@ -211,10 +312,11 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     borderWidth: 4,
     borderColor: '#fff',
+  },
+  avatarIcon: {
     position: 'absolute',
-    top: 150,
-    left: '50%',
-    marginLeft: -60,
+    right: 0,
+    bottom: 0,
   },
   username: {
     fontSize: 24,
