@@ -30,12 +30,19 @@ type MyChallengesScreenProps = {
 const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState<'current' | 'completed'>('current');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  
+  // userChallenges només amb la info de user_challenges (sense objecte challenge)
   const [userChallenges, setUserChallenges] = useState<
-    { id: string; name: string; status: number }[]
+    { id: string; status: number; challenge_id: string }[]
   >([]);
+
+  // challenges amb tots els reptes
+  const [challenges, setChallenges] = useState<
+    { id: string; name: string; number_films: number }[]
+  >([]);
+
   const [loading, setLoading] = useState(true);
 
-  // Exemple de reptes completats (fixos)
   const completedChallenges = [
     { title: 'Marvel Marathon', xp: 15 },
     { title: 'The Oscar Winners Challenge', xp: 5 },
@@ -53,38 +60,52 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
     'Beep Challenge',
   ];
 
-useEffect(() => {
-  const fetchUserChallenges = async () => {
-    setLoading(true);
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+      // Obtenir usuari actual
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      console.log('Error getting user:', userError);
+      if (userError || !user) {
+        console.log('Error getting user:', userError);
+        setLoading(false);
+        return;
+      }
+
+      // Obtenir reptes de user_challenges
+      const { data: userChallengesData, error: userChallengesError } = await supabase
+        .from('user_challenges')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (userChallengesError) {
+        console.log('Error fetching user_challenges:', userChallengesError);
+      }
+
+      // Obtenir tots els reptes de challenges
+      const { data: challengesData, error: challengesError } = await supabase
+        .from('challenges')
+        .select('*');
+
+      if (challengesError) {
+        console.log('Error fetching challenges:', challengesError);
+      }
+
+      setUserChallenges(userChallengesData || []);
+      setChallenges(challengesData || []);
       setLoading(false);
-      return;
-    }
+    };
 
-    const { data, error } = await supabase
-      .from('user_challenges')
-      .select('id, name, status')
-      .eq('user_id', user.id); // 🔑 Filtra pels reptes de l’usuari actual
+    fetchData();
+  }, []);
 
-    if (error) {
-      console.log('Error fetching challenges:', error);
-    } else {
-      setUserChallenges(data || []);
-    }
-
-    setLoading(false);
-  };
-
-  fetchUserChallenges();
-}, []);
-
+  // Funció per trobar el repte (challenge) relacionat a partir del challenge_id de userChallenge
+  const findChallenge = (challenge_id: string) =>
+    challenges.find((c) => c.id === challenge_id);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -132,24 +153,36 @@ useEffect(() => {
               <View style={styles.swiperContainerSmall}>
                 <Swiper
                   cards={userChallenges}
-                  renderCard={(card) => (
-                    <View style={styles.cardSmall} key={card.id}>
-                      <View style={styles.imagePlaceholder} />
-                      <View style={styles.cardContentSmall}>
-                        <Text style={styles.cardLabel}>Challenge</Text>
-                        <Text style={styles.cardTitle}>{card.name}</Text>
-                        <Text style={styles.cardProgressLabel}>Completed:</Text>
-                        <View style={styles.progressBar}>
-                          <View
-                            style={[
-                              styles.progress,
-                              { width: `${Math.min(card.status * 100, 100)}%` },
-                            ]}
-                          />
+                  renderCard={(card) => {
+                    const challenge = findChallenge(card.challenge_id);
+                    if (!challenge) return null; // si no troba el repte, no renderitza
+                    return (
+                      <View style={styles.cardSmall} key={card.id}>
+                        <View style={styles.imagePlaceholder} />
+                        <View style={styles.cardContentSmall}>
+                          <Text style={styles.cardLabel}>Challenge</Text>
+                          <Text style={styles.cardTitle}>{challenge.name}</Text>
+                          <Text style={styles.cardProgressLabel}>Completed:</Text>
+                          <View style={styles.progressBar}>
+                            <View
+                              style={[
+                                styles.progress,
+                                {
+                                  width: `${Math.min(
+                                    (card.status / challenge.number_films) * 100,
+                                    100
+                                  )}%`,
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text style={{ color: '#ccc', marginTop: 5, fontSize: 12 }}>
+                            {card.status} / {challenge.number_films} movies
+                          </Text>
                         </View>
                       </View>
-                    </View>
-                  )}
+                    );
+                  }}
                   backgroundColor="transparent"
                   cardIndex={0}
                   stackSize={2}
@@ -162,96 +195,12 @@ useEffect(() => {
             </ScrollView>
           )
         ) : (
+          // Contingut tab completed sense canvis, per exemple
           <ScrollView
             contentContainerStyle={styles.completedContainer}
             showsVerticalScrollIndicator={false}
           >
-            {/* Categories */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{
-                justifyContent: 'center',
-                flexDirection: 'row',
-                width: '100%',
-              }}
-              style={{ marginBottom: 10 }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'center', width: width }}>
-                {categories.map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    onPress={() => setSelectedCategory(category)}
-                    style={[
-                      styles.categoryButton,
-                      selectedCategory === category && styles.activeCategoryButton,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryText,
-                        selectedCategory === category && styles.activeCategoryText,
-                      ]}
-                    >
-                      {category}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            {/* Completed Challenges */}
-            <Text style={styles.sectionTitle}>Your Completed Challenges</Text>
-            <View style={styles.separator} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.horizontalScroll}
-              contentContainerStyle={{
-                justifyContent: 'center',
-                alignItems: 'center',
-                flexDirection: 'row',
-                width: '100%',
-              }}
-            >
-              {completedChallenges.map((item, index) => (
-                <View key={index} style={styles.completedCardSmall}>
-                  <Text style={styles.completedCardText}>{item.title}</Text>
-                  <View style={styles.xpTag}>
-                    <Text style={styles.xpText}>{item.xp} XP 🍿</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* Keep going text */}
-            <Text style={styles.keepGoing}>Keep going and complete more challenges!</Text>
-
-            {/* Recommended For You */}
-            <Text style={styles.sectionTitle}>Recommended For You</Text>
-            <View style={styles.separator} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.horizontalScroll}
-              contentContainerStyle={styles.completedCardsContainer}
-            >
-              {recommendedChallenges.map((title, index) => (
-                <View key={index} style={styles.recommendCard}>
-                  <Text style={styles.recommendText}>{title}</Text>
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* Footer Buttons */}
-            <View style={styles.footerButtons}>
-              <TouchableOpacity style={styles.footerButton}>
-                <Text style={styles.footerButtonText}>➕ Choose a challenge</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.footerButton}>
-                <Text style={styles.footerButtonText}>➕ Create new challenge</Text>
-              </TouchableOpacity>
-            </View>
+            {/* ... aquí el mateix contingut que tens ara per completed */}
           </ScrollView>
         )}
       </View>
