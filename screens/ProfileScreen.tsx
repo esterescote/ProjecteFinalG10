@@ -154,7 +154,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <Ionicons name="link" size={22} color="#fff" style={styles.avatarIcon} />
         </TouchableOpacity>
 
-        <Text style={styles.username}>{profile?.username ?? 'John Doe'}</Text>
+        <Text style={styles.username}>{profile?.username ?? 'Ester'}</Text>
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
         <Text style={styles.section}>Calendari</Text>

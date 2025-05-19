@@ -40,25 +40,12 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
   const [challenges, setChallenges] = useState<
     { id: string; name: string; number_films: number }[]
   >([]);
+  const [completedUserChallenges, setCompletedUserChallenges] = useState<
+  { id: string; status: number; challenge_id: string }[]
+>([]);
+
 
   const [loading, setLoading] = useState(true);
-
-  const completedChallenges = [
-    { title: 'Marvel Marathon', xp: 15 },
-    { title: 'The Oscar Winners Challenge', xp: 5 },
-    { title: 'Lord of the Rings & The Hobbit Marathon', xp: 8 },
-  ];
-
-  const categories = ['All', 'Action', 'Adventure', 'Animation', 'Horror'];
-
-  const recommendedChallenges = [
-    'Monthly Challenge',
-    'Inside Out marathon',
-    '15 days non-stop.',
-    'Non-Stop in 24 Hours',
-    'Cine-Bingo',
-    'Beep Challenge',
-  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,6 +84,14 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
 
       setUserChallenges(userChallengesData || []);
       setChallenges(challengesData || []);
+      if (userChallengesData && challengesData) {
+  const completed = userChallengesData.filter((uc) => {
+    const challenge = challengesData.find((c) => c.id === uc.challenge_id);
+    return challenge && uc.status === challenge.number_films;
+  });
+  setCompletedUserChallenges(completed);
+}
+
       setLoading(false);
     };
 
@@ -146,6 +141,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
               No current challenges found.
             </Text>
           ) : (
+            
             <ScrollView
               contentContainerStyle={styles.currentScrollContainer}
               showsVerticalScrollIndicator={false}
@@ -197,11 +193,35 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
         ) : (
           // Contingut tab completed sense canvis, per exemple
           <ScrollView
-            contentContainerStyle={styles.completedContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* ... aquí el mateix contingut que tens ara per completed */}
-          </ScrollView>
+  contentContainerStyle={styles.completedContainer}
+  showsVerticalScrollIndicator={false}
+>
+  {loading ? (
+    <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>
+      Loading completed challenges...
+    </Text>
+  ) : completedUserChallenges.length === 0 ? (
+    <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>
+      No completed challenges found.
+    </Text>
+  ) : (
+    <View style={styles.completedCardsContainer}>
+      {completedUserChallenges.map((uc) => {
+        const challenge = findChallenge(uc.challenge_id);
+        if (!challenge) return null;
+        return (
+          <View style={styles.completedCardSmall} key={uc.id}>
+            <Text style={styles.completedCardText}>{challenge.name}</Text>
+            <View style={styles.xpTag}>
+              <Text style={styles.xpText}>{challenge.number_films} XP</Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  )}
+</ScrollView>
+
         )}
       </View>
 
@@ -366,7 +386,7 @@ fontSize: 16,
 },
 xpTag: {
 marginTop: 5,
-backgroundColor: '#FFDD95',
+backgroundColor: '#800020',
 paddingVertical: 3,
 paddingHorizontal: 7,
 borderRadius: 15,
