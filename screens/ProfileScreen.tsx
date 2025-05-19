@@ -19,7 +19,7 @@ import * as Calendar from 'expo-calendar';
 import { Calendar as CalendarView, DateData } from 'react-native-calendars';
 
 /** TYPES */
-type RootStackParamList = {
+export type RootStackParamList = {
   Home: undefined;
   NewChallenges: undefined;
   MyChallenges: undefined;
@@ -27,9 +27,9 @@ type RootStackParamList = {
   Profile: undefined;
 };
 
-type ProfileScreenProps = {
+interface ProfileScreenProps {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Profile'>;
-};
+}
 
 /** CONSTANTS */
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
@@ -88,7 +88,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   /** Save link to DB */
   const handleSave = async () => {
     const url = link.trim();
-    if (!IMG_REGEX.test(url)) return Alert.alert('URL invàlida', 'L\'enllaç ha de ser una imatge (.png, .jpg, ...).');
+    if (!IMG_REGEX.test(url)) return Alert.alert('URL invàlida', "L'enllaç ha de ser una imatge (.png, .jpg, ...).");
     if (!profile?.id) return;
 
     const { error } = await supabase
@@ -99,7 +99,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
     if (error) {
       console.log(error);
-      return Alert.alert('Error', 'No s\'ha pogut desar. Comprova permisos RLS.');
+      return Alert.alert('Error', "No s'ha pogut desar. Comprova permisos RLS.");
     }
 
     setProfile({ ...profile, [modal.column]: url });
@@ -131,7 +131,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       <Modal transparent visible={modal.open} animationType="fade" onRequestClose={() => setModal({ ...modal, open: false })}>
         <View style={styles.backdrop}>
           <View style={styles.modalBox}>
-            <Text style={styles.title}>Enganxa l\'enllaç de la imatge</Text>
+            <Text style={styles.title}>Enganxa l'enllaç de la imatge</Text>
             <TextInput placeholder="https://..." value={link} onChangeText={setLink} style={styles.input} autoCapitalize="none" />
             <View style={styles.rowEnd}>
               <TouchableOpacity onPress={() => setModal({ ...modal, open: false })} style={styles.btn}><Text>Cancel·la</Text></TouchableOpacity>
@@ -154,12 +154,31 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <Ionicons name="link" size={22} color="#fff" style={styles.avatarIcon} />
         </TouchableOpacity>
 
-        <Text style={styles.username}>{profile?.username ?? 'Ester'}</Text>
+        <Text style={styles.username}>{profile?.username ?? 'John Doe'}</Text>
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
         <Text style={styles.section}>Calendari</Text>
         <CalendarView onDayPress={(d: DateData) => addEvent(d.dateString)} style={styles.calendar} />
       </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')}>
+          <Ionicons name="calendar" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')}>
+          <Ionicons name="add-circle" size={30} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Progress')}>
+          <Ionicons name="trophy" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person" size={26} color="#FFDD95" />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -185,6 +204,17 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 8, marginBottom: 15 },
   rowEnd: { flexDirection: 'row', justifyContent: 'flex-end' },
   btn: { marginLeft: 15 },
+  /* bottom nav */
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#2b2323',
+    paddingVertical: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+  },
 });
 
 export default ProfileScreen;
