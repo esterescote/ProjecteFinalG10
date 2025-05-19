@@ -53,22 +53,38 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
     'Beep Challenge',
   ];
 
-  useEffect(() => {
-    const fetchUserChallenges = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('user_challenges')
-        .select('id, name, status');
-      if (error) {
-        console.log('Error fetching challenges:', error);
-      } else {
-        // status ja és un número entre 0 i 1, que indica el progrés
-        setUserChallenges(data || []);
-      }
+useEffect(() => {
+  const fetchUserChallenges = async () => {
+    setLoading(true);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.log('Error getting user:', userError);
       setLoading(false);
-    };
-    fetchUserChallenges();
-  }, []);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('user_challenges')
+      .select('id, name, status')
+      .eq('user_id', user.id); // 🔑 Filtra pels reptes de l’usuari actual
+
+    if (error) {
+      console.log('Error fetching challenges:', error);
+    } else {
+      setUserChallenges(data || []);
+    }
+
+    setLoading(false);
+  };
+
+  fetchUserChallenges();
+}, []);
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
