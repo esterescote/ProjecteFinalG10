@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "cinema-challenges-app",
+    "name": "Cinema Challenges",
     "slug": "cinema-challenges-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,11 @@
 
     "android": {
       "package": "com.grup10.cinema_challenges_app",
-      "versionCode": 1
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      }
     },
 
     "ios": {

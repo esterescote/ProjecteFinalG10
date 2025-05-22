@@ -11,53 +11,32 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import * as Calendar from 'expo-calendar';
-import { Calendar as CalendarView, DateData } from 'react-native-calendars';
 
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 const defaultHeader = 'https://i.imgur.com/2yHBo8a.jpg';
 
-const PROFILE_PICTURES = [
-  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/darthvader.jpeg',
-  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/mickeymouse.jpg',
-  'https://i.imgur.com/tPCEhLg.png',
-  'https://i.imgur.com/kTbzJba.png',
-  'https://i.imgur.com/TXbJDCh.jpg',
-  'https://i.imgur.com/DPzIB6H.jpg',
-  'https://i.imgur.com/Aw0BFcs.png',
-  'https://i.imgur.com/vA2qtvl.jpg',
-  'https://i.imgur.com/sLwXW9x.jpg',
-  'https://i.imgur.com/2aCMl7L.png',
-];
+const PROFILE_PICTURES = [/* ... */];
+const HEADER_PICTURES = [/* ... */];
 
-const HEADER_PICTURES = [
-  'https://i.imgur.com/2yHBo8a.jpg',
-  'https://i.imgur.com/v91LgQW.jpg',
-  'https://i.imgur.com/hqzLtAm.jpg',
-  'https://i.imgur.com/LS3VkLj.jpg',
-  'https://i.imgur.com/2HLCTaH.jpg',
-  'https://i.imgur.com/IYsxrsc.jpg',
-  'https://i.imgur.com/oXDZt7p.jpg',
-  'https://i.imgur.com/c2KEluL.jpg',
-  'https://i.imgur.com/YULw9ar.jpg',
-  'https://i.imgur.com/gA1rwtr.jpg',
-];
-
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [calendarId, setCalendarId] = useState(null);
   const [modal, setModal] = useState({ open: false, column: 'profile_picture' });
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameEdit, setUsernameEdit] = useState('');
+  const [currentChallenges, setCurrentChallenges] = useState([]);
 
   useEffect(() => {
-    (async () => {
-      await loadProfile();
-      await ensureCalendar();
-    })();
+    loadProfile();
   }, []);
+
+  useEffect(() => {
+    if (profile?.id) fetchCurrentChallenges();
+  }, [profile]);
 
   const loadProfile = async () => {
     const { data: { session }, error } = await supabase.auth.getSession();
@@ -72,14 +51,28 @@ const ProfileScreen = ({ navigation }) => {
     if (dbErr) console.log(dbErr.message);
 
     setProfile(data);
+    setUsernameEdit(data?.username ?? '');
     setLoading(false);
   };
 
-  const ensureCalendar = async () => {
-    const { status } = await Calendar.requestCalendarPermissionsAsync();
-    if (status !== 'granted') return;
-    const editable = (await Calendar.getCalendarsAsync()).find(c => c.allowsModifications);
-    if (editable) setCalendarId(editable.id);
+  const fetchCurrentChallenges = async () => {
+    const { data: userChallenges, error } = await supabase
+      .from('user_challenges')
+      .select('challenge_id')
+      .eq('user_id', profile.id);
+
+    if (error) return console.log(error);
+
+    const challengeIds = userChallenges.map((uc) => uc.challenge_id);
+
+    const { data: challenges, error: challengesError } = await supabase
+      .from('challenges')
+      .select('id, name, image')
+      .in('id', challengeIds);
+
+    if (challengesError) return console.log(challengesError);
+
+    setCurrentChallenges(challenges);
   };
 
   const openImagePicker = (column) => {
@@ -103,14 +96,20 @@ const ProfileScreen = ({ navigation }) => {
     setModal({ ...modal, open: false });
   };
 
-  const addEvent = async (date) => {
-    if (!calendarId) return;
-    await Calendar.createEventAsync(calendarId, {
-      title: 'Nova activitat de repte!',
-      startDate: new Date(date),
-      endDate: new Date(new Date(date).getTime() + 60 * 60 * 1000),
-      timeZone: 'GMT',
-    });
+  const handleSaveUsername = async () => {
+    if (!profile?.id) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ username: usernameEdit })
+      .eq('id', profile.id);
+
+    if (error) {
+      console.log(error);
+      return Alert.alert('Error', "No s'ha pogut actualitzar el nom.");
+    }
+
+    setProfile({ ...profile, username: usernameEdit });
+    setEditingUsername(false);
   };
 
   if (loading) {
@@ -151,34 +150,106 @@ const ProfileScreen = ({ navigation }) => {
           <Ionicons name="link" size={22} color="#fff" style={styles.avatarIcon} />
         </TouchableOpacity>
 
-        <Text style={styles.username}>{profile?.username ?? 'John Doe'}</Text>
+        <View style={styles.usernameWrapper}>
+          {editingUsername ? (
+            <>
+              <TextInput
+                value={usernameEdit}
+                onChangeText={setUsernameEdit}
+                style={styles.usernameInput}
+              />
+              <TouchableOpacity onPress={handleSaveUsername}>
+                <Text style={styles.saveButton}>Desar</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.usernameRow}>
+              <Text style={styles.username}>{profile?.username ?? 'John Doe'}</Text>
+              <TouchableOpacity onPress={() => setEditingUsername(true)}>
+                <Text style={styles.editIcon}>✏️</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
-        <Text style={styles.section}>Calendari</Text>
-        <CalendarView onDayPress={(d: DateData) => addEvent(d.dateString)} style={styles.calendar} />
+        {/* Pel·lícules preferides */}
+        <Text style={styles.section}>Pel·lícules preferides</Text>
+        {profile?.favourite_films?.length > 0 ? (
+          profile.favourite_films.map((film, index) => (
+            <Text key={index} style={styles.itemText}>🎬 {film}</Text>
+          ))
+        ) : (
+          <Text style={styles.noItems}>Encara no tens cap pel·lícula preferida.</Text>
+        )}
+
+        {/* Reptes actuals */}
+        <Text style={styles.section}>Current Challenges</Text>
+        {currentChallenges.length === 0 ? (
+          <Text style={styles.noItems}>No estàs fent cap repte actualment.</Text>
+        ) : (
+          <ScrollView horizontal contentContainerStyle={styles.horizontalList}>
+            {currentChallenges.map((challenge) => (
+              <View key={challenge.id} style={styles.challengePill}>
+                <Image source={{ uri: challenge.image }} style={styles.challengeImage} />
+                <Text style={styles.challengeName}>{challenge.name}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
+  safeArea: { flex: 1, backgroundColor: '#3a2f2f' },
   scroll: { flexGrow: 1, paddingBottom: 100 },
   headerImg: { width: '100%', height: 250, resizeMode: 'cover' },
   iconHeader: { position: 'absolute', right: 15, bottom: 15 },
   avatarWrapper: { position: 'absolute', top: 150, left: '50%', marginLeft: -60 },
   avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, borderColor: '#fff' },
   avatarIcon: { position: 'absolute', right: 0, bottom: 0 },
-  username: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginTop: 90 },
-  xp: { textAlign: 'center', color: '#666' },
-  section: { fontSize: 18, margin: 20 },
-  calendar: { marginHorizontal: 20 },
+  usernameWrapper: { alignItems: 'center', marginTop: 90 },
+  usernameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  username: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', color: 'white' },
+  editIcon: { fontSize: 20, marginLeft: 6 },
+  usernameInput: {
+    fontSize: 24,
+    borderBottomWidth: 1,
+    textAlign: 'center',
+    paddingVertical: 4,
+    width: 200,
+  },
+  saveButton: { color: '#007bff', marginTop: 5 },
+  xp: { textAlign: 'center', color: 'white' },
+  section: { fontSize: 18, margin: 20, color: 'white' },
+  noItems: { textAlign: 'center', color: 'white', marginBottom: 10 },
+  itemText: { color: 'white', paddingHorizontal: 20, marginBottom: 6 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   modalBox: { width: '85%', backgroundColor: '#fff', padding: 20, borderRadius: 12, maxHeight: '80%' },
   title: { fontSize: 16, marginBottom: 10, fontWeight: 'bold' },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   selectImage: { width: 70, height: 70, borderRadius: 10, margin: 5, borderWidth: 2, borderColor: '#ccc' },
+  horizontalList: { paddingHorizontal: 20 },
+  challengePill: {
+    marginRight: 15,
+    alignItems: 'center',
+    backgroundColor: '#4a3d3d',
+    borderRadius: 12,
+    padding: 10,
+    width: 120,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  challengeImage: { width: 80, height: 80, borderRadius: 10, marginBottom: 8 },
+  challengeName: { fontSize: 14, color: 'white', textAlign: 'center' },
 });
 
 export default ProfileScreen;
