@@ -19,8 +19,16 @@ import { supabase } from '../lib/supabase';
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 const defaultHeader = 'https://i.imgur.com/2yHBo8a.jpg';
 
-const PROFILE_PICTURES = [/* ... */];
-const HEADER_PICTURES = [/* ... */];
+const PROFILE_PICTURES = [
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/avatar1.png',
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/avatar2.png',
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/avatar3.png',
+];
+
+const HEADER_PICTURES = [
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/header1.jpg',
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/header2.jpg',
+];
 
 const ProfileScreen = () => {
   const [profile, setProfile] = useState(null);
@@ -174,7 +182,6 @@ const ProfileScreen = () => {
 
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
-        {/* Pel·lícules preferides */}
         <Text style={styles.section}>Pel·lícules preferides</Text>
         {profile?.favourite_films?.length > 0 ? (
           profile.favourite_films.map((film, index) => (
@@ -184,7 +191,6 @@ const ProfileScreen = () => {
           <Text style={styles.noItems}>Encara no tens cap pel·lícula preferida.</Text>
         )}
 
-        {/* Reptes actuals */}
         <Text style={styles.section}>Current Challenges</Text>
         {currentChallenges.length === 0 ? (
           <Text style={styles.noItems}>No estàs fent cap repte actualment.</Text>
