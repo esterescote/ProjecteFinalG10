@@ -1,3 +1,4 @@
+// ProfileScreen.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -9,68 +10,45 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
-  TextInput,
   Modal,
-  FlatList,
+  TextInput,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 const defaultHeader = 'https://i.imgur.com/2yHBo8a.jpg';
 
+const PROFILE_PICTURES = [
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/avatar1.png',
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/avatar2.png',
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/avatar3.png',
+];
+
+const HEADER_PICTURES = [
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/header1.jpg',
+  'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/header2.jpg',
+];
+
 const ProfileScreen = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState({ open: false, column: 'profile_picture' });
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameEdit, setUsernameEdit] = useState('');
   const [currentChallenges, setCurrentChallenges] = useState([]);
-  const [avatars, setAvatars] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-
-  useEffect(() => {
-    loadAvatars();
-  }, []);
 
   useEffect(() => {
     loadProfile();
-  }, [avatars]);
+  }, []);
 
   useEffect(() => {
     if (profile?.id) fetchCurrentChallenges();
   }, [profile]);
 
-  const loadAvatars = async () => {
-    const { data, error } = await supabase.from('avatars').select('id, image');
-    if (error) {
-      console.log('Error loading avatars:', error);
-      return;
-    }
-
-    // Mapear a URLs públiques
-    const avatarsWithUrl = data.map((avatar) => {
-      const { publicUrl } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(avatar.image);
-      return {
-        id: avatar.id,
-        image: publicUrl,
-      };
-    });
-
-    setAvatars(avatarsWithUrl);
-  };
-
   const loadProfile = async () => {
-    setLoading(true);
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
-
-    if (error || !session?.user) {
-      setLoading(false);
-      return;
-    }
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session?.user) return setLoading(false);
 
     const { data, error: dbErr } = await supabase
       .from('profiles')
@@ -78,20 +56,9 @@ const ProfileScreen = () => {
       .eq('id', session.user.id)
       .single();
 
-    if (dbErr) {
-      console.log(dbErr.message);
-      setLoading(false);
-      return;
-    }
+    if (dbErr) console.log(dbErr.message);
 
-    // Si profile_picture és un id d'avatar, agafem la URL corresponent
-    let profilePictureUrl = defaultAvatar;
-    if (data?.profile_picture) {
-      const avatar = avatars.find((a) => a.id === data.profile_picture);
-      if (avatar) profilePictureUrl = avatar.image;
-    }
-
-    setProfile({ ...data, profile_picture: profilePictureUrl });
+    setProfile(data);
     setUsernameEdit(data?.username ?? '');
     setLoading(false);
   };
@@ -102,10 +69,7 @@ const ProfileScreen = () => {
       .select('challenge_id')
       .eq('user_id', profile.id);
 
-    if (error) {
-      console.log(error);
-      return;
-    }
+    if (error) return console.log(error);
 
     const challengeIds = userChallenges.map((uc) => uc.challenge_id);
 
@@ -114,12 +78,30 @@ const ProfileScreen = () => {
       .select('id, name, image')
       .in('id', challengeIds);
 
-    if (challengesError) {
-      console.log(challengesError);
-      return;
-    }
+    if (challengesError) return console.log(challengesError);
 
     setCurrentChallenges(challenges);
+  };
+
+  const openImagePicker = (column) => {
+    setModal({ open: true, column });
+  };
+
+  const handleSelectImage = async (url) => {
+    if (!profile?.id) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [modal.column]: url })
+      .eq('id', profile.id);
+
+    if (error) {
+      console.log(error);
+      return Alert.alert('Error', "No s'ha pogut desar la imatge.");
+    }
+
+    setProfile({ ...profile, [modal.column]: url });
+    setModal({ ...modal, open: false });
   };
 
   const handleSaveUsername = async () => {
@@ -138,25 +120,6 @@ const ProfileScreen = () => {
     setEditingUsername(false);
   };
 
-  const handleSelectAvatar = async (avatarId, avatarUrl) => {
-    if (!profile?.id) return;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ profile_picture: avatarId })
-      .eq('id', profile.id);
-
-    if (error) {
-      console.log(error);
-      Alert.alert('Error', 'No s\'ha pogut actualitzar la imatge de perfil.');
-      return;
-    }
-
-    // Actualitzar localment
-    setProfile({ ...profile, profile_picture: avatarUrl });
-    setModalVisible(false);
-  };
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -165,22 +128,34 @@ const ProfileScreen = () => {
     );
   }
 
+  const imageList = modal.column === 'profile_picture' ? PROFILE_PICTURES : HEADER_PICTURES;
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Image
-          source={{ uri: profile?.header_picture || defaultHeader }}
-          style={styles.headerImg}
-        />
+      <Modal transparent visible={modal.open} animationType="fade" onRequestClose={() => setModal({ ...modal, open: false })}>
+        <View style={styles.backdrop}>
+          <View style={styles.modalBox}>
+            <Text style={styles.title}>Selecciona una imatge</Text>
+            <View style={styles.gridContainer}>
+              {imageList.map((url, idx) => (
+                <TouchableOpacity key={idx} onPress={() => handleSelectImage(url)}>
+                  <Image source={{ uri: url }} style={styles.selectImage} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
-        <TouchableOpacity
-          style={styles.avatarWrapper}
-          onPress={() => setModalVisible(true)}
-        >
-          <Image
-            source={{ uri: profile?.profile_picture || defaultAvatar }}
-            style={styles.avatar}
-          />
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <TouchableOpacity onPress={() => openImagePicker('header_picture')}>
+          <Image source={{ uri: profile?.header_picture || defaultHeader }} style={styles.headerImg} />
+          <Ionicons name="link" size={26} color="#fff" style={styles.iconHeader} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.avatarWrapper} onPress={() => openImagePicker('profile_picture')}>
+          <Image source={{ uri: profile?.profile_picture || defaultAvatar }} style={styles.avatar} />
+          <Ionicons name="link" size={22} color="#fff" style={styles.avatarIcon} />
         </TouchableOpacity>
 
         <View style={styles.usernameWrapper}>
@@ -210,15 +185,13 @@ const ProfileScreen = () => {
         <Text style={styles.section}>Pel·lícules preferides</Text>
         {profile?.favourite_films?.length > 0 ? (
           profile.favourite_films.map((film, index) => (
-            <Text key={index} style={styles.itemText}>
-              🎬 {film}
-            </Text>
+            <Text key={index} style={styles.itemText}>🎬 {film}</Text>
           ))
         ) : (
           <Text style={styles.noItems}>Encara no tens cap pel·lícula preferida.</Text>
         )}
 
-        <Text style={styles.section}>Reptes actuals</Text>
+        <Text style={styles.section}>Current Challenges</Text>
         {currentChallenges.length === 0 ? (
           <Text style={styles.noItems}>No estàs fent cap repte actualment.</Text>
         ) : (
@@ -232,35 +205,6 @@ const ProfileScreen = () => {
           </ScrollView>
         )}
 
-        {/* Modal per escollir avatar */}
-        <Modal visible={modalVisible} animationType="slide" transparent={true}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Escull una imatge de perfil</Text>
-
-              <FlatList
-                data={avatars}
-                keyExtractor={(item) => item.id.toString()}
-                numColumns={3}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => handleSelectAvatar(item.id, item.image)}
-                    style={styles.avatarOptionWrapper}
-                  >
-                    <Image source={{ uri: item.image }} style={styles.avatarOption} />
-                  </TouchableOpacity>
-                )}
-              />
-
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.modalCloseText}>Tancar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -270,20 +214,10 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#3a2f2f' },
   scroll: { flexGrow: 1, paddingBottom: 100 },
   headerImg: { width: '100%', height: 250, resizeMode: 'cover' },
-  avatarWrapper: {
-    position: 'absolute',
-    top: 150,
-    left: '50%',
-    marginLeft: -60,
-    zIndex: 10,
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: '#fff',
-  },
+  iconHeader: { position: 'absolute', right: 15, bottom: 15 },
+  avatarWrapper: { position: 'absolute', top: 150, left: '50%', marginLeft: -60 },
+  avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, borderColor: '#fff' },
+  avatarIcon: { position: 'absolute', right: 0, bottom: 0 },
   usernameWrapper: { alignItems: 'center', marginTop: 90 },
   usernameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   username: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', color: 'white' },
@@ -294,8 +228,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 4,
     width: 200,
-    color: 'white',
-    borderBottomColor: 'white',
   },
   saveButton: { color: '#007bff', marginTop: 5 },
   xp: { textAlign: 'center', color: 'white' },
@@ -303,6 +235,11 @@ const styles = StyleSheet.create({
   noItems: { textAlign: 'center', color: 'white', marginBottom: 10 },
   itemText: { color: 'white', paddingHorizontal: 20, marginBottom: 6 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalBox: { width: '85%', backgroundColor: '#fff', padding: 20, borderRadius: 12, maxHeight: '80%' },
+  title: { fontSize: 16, marginBottom: 10, fontWeight: 'bold' },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  selectImage: { width: 70, height: 70, borderRadius: 10, margin: 5, borderWidth: 2, borderColor: '#ccc' },
   horizontalList: { paddingHorizontal: 20 },
   challengePill: {
     marginRight: 15,
@@ -319,45 +256,6 @@ const styles = StyleSheet.create({
   },
   challengeImage: { width: 80, height: 80, borderRadius: 10, marginBottom: 8 },
   challengeName: { fontSize: 14, color: 'white', textAlign: 'center' },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#3a2f2f',
-    borderRadius: 15,
-    padding: 15,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  avatarOptionWrapper: {
-    flex: 1 / 3,
-    padding: 5,
-    alignItems: 'center',
-  },
-  avatarOption: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  modalCloseButton: {
-    marginTop: 10,
-    alignSelf: 'center',
-  },
-  modalCloseText: {
-    color: '#007bff',
-    fontSize: 18,
-  },
 });
 
 export default ProfileScreen;
