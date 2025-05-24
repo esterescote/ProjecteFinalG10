@@ -11,7 +11,6 @@ import {
   Alert,
   TextInput,
   Modal,
-  FlatList,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 
@@ -24,22 +23,21 @@ type Challenge = {
   image: string;
 };
 
-type Avatar = {
-  id: string;
-  image: string;
-};
-
 type Profile = {
   id: string;
   username: string;
   email: string;
-  avatar_url?: string;
   profile_picture?: string;
-  header_picture?: string; // Afegeix això
+  header_picture?: string;
   xp?: number;
   favourite_films?: string[];
 };
 
+type Avatar = {
+  id: number;
+  name: string;
+  avatar_url: string; // URL completa de la imatge
+};
 
 const ProfileScreen = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -51,34 +49,9 @@ const ProfileScreen = () => {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
 
   useEffect(() => {
-    const loadData = async () => {
-      await loadAvatars();
-      await loadProfile();
-    };
-    loadData();
+    loadProfile();
+    loadAvatars();
   }, []);
-
-  const loadAvatars = async () => {
-    const { data, error } = await supabase.from('avatars').select('id, image');
-    if (error) {
-      console.log('Error loading avatars:', error);
-      return;
-    }
-
-    const avatarsWithUrl = await Promise.all(
-      data.map(async (avatar) => {
-        const { data: publicData } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(avatar.image);
-        return {
-          id: avatar.id,
-          image: publicData?.publicUrl ?? defaultAvatar,
-        };
-      })
-    );
-
-    setAvatars(avatarsWithUrl);
-  };
 
   const loadProfile = async () => {
     setLoading(true);
@@ -104,22 +77,24 @@ const ProfileScreen = () => {
       return;
     }
 
-    let profilePictureUrl = defaultAvatar;
-    if (data?.profile_picture) {
-      const avatar = avatars.find((a) => a.id === data.profile_picture);
-      if (avatar) profilePictureUrl = avatar.image;
-    }
-
-   setProfile({
-  ...data,
-  email: session.user.email,
-  profile_picture: profilePictureUrl,
-  favourite_films: data?.favourite_films ?? [],
-});
+    setProfile({
+      ...data,
+      email: session.user.email,
+      favourite_films: data?.favourite_films ?? [],
+    });
 
     setUsernameEdit(data?.username ?? '');
     await fetchCurrentChallenges(session.user.id);
     setLoading(false);
+  };
+
+  const loadAvatars = async () => {
+    const { data, error } = await supabase.from('avatars').select('*');
+    if (error) {
+      console.log('Error carregant avatars:', error.message);
+      return;
+    }
+    setAvatars(data);
   };
 
   const fetchCurrentChallenges = async (userId: string) => {
@@ -164,21 +139,22 @@ const ProfileScreen = () => {
     setEditingUsername(false);
   };
 
-  const handleSelectAvatar = async (avatarId: string, avatarUrl: string) => {
+  const handleAvatarSelect = async (avatar: Avatar) => {
     if (!profile?.id) return;
 
+    // Actualitza a Supabase
     const { error } = await supabase
       .from('profiles')
-      .update({ profile_picture: avatarId })
+      .update({ profile_picture: avatar.avatar_url })
       .eq('id', profile.id);
 
     if (error) {
       console.log(error);
-      Alert.alert('Error', 'No s\'ha pogut actualitzar la imatge de perfil.');
-      return;
+      return Alert.alert('Error', "No s'ha pogut actualitzar la imatge de perfil.");
     }
 
-    setProfile({ ...profile, profile_picture: avatarUrl });
+    // Actualitza l'estat local per refrescar la imatge
+    setProfile({ ...profile, profile_picture: avatar.avatar_url });
     setModalVisible(false);
   };
 
@@ -222,7 +198,7 @@ const ProfileScreen = () => {
             </>
           ) : (
             <View style={styles.usernameRow}>
-              <Text style={styles.username}>{profile?.email ?? 'Usuari anònim'}</Text>
+              <Text style={styles.username}>{profile?.username ?? 'Usuari anònim'}</Text>
               <TouchableOpacity onPress={() => setEditingUsername(true)}>
                 <Text style={styles.editIcon}>✏️</Text>
               </TouchableOpacity>
@@ -234,15 +210,14 @@ const ProfileScreen = () => {
 
         <Text style={styles.section}>Pel·lícules preferides</Text>
         {profile?.favourite_films && profile.favourite_films.length > 0 ? (
-  profile.favourite_films.map((film, index) => (
-    <Text key={index} style={styles.itemText}>
-      🎬 {film}
-    </Text>
-  ))
-) : (
-  <Text style={styles.noItems}>Encara no tens cap pel·lícula preferida.</Text>
-)}
-
+          profile.favourite_films.map((film, index) => (
+            <Text key={index} style={styles.itemText}>
+              🎬 {film}
+            </Text>
+          ))
+        ) : (
+          <Text style={styles.noItems}>Encara no tens cap pel·lícula preferida.</Text>
+        )}
 
         <Text style={styles.section}>Reptes actuals</Text>
         {currentChallenges.length === 0 ? (
@@ -262,27 +237,23 @@ const ProfileScreen = () => {
         <Modal visible={modalVisible} animationType="slide" transparent={true}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Escull una imatge de perfil</Text>
-
-              <FlatList
-                data={avatars}
-                keyExtractor={(item) => item.id.toString()}
-                numColumns={3}
-                renderItem={({ item }) => (
+              <Text style={styles.modalTitle}>Escull la teva imatge de perfil</Text>
+              <ScrollView>
+                {avatars.map((avatar) => (
                   <TouchableOpacity
-                    onPress={() => handleSelectAvatar(item.id, item.image)}
-                    style={styles.avatarOptionWrapper}
+                    key={avatar.id}
+                    onPress={() => handleAvatarSelect(avatar)}
+                    style={styles.avatarOption}
                   >
-                    <Image source={{ uri: item.image }} style={styles.avatarOption} />
+                    <Text style={styles.avatarOptionText}>{avatar.name}</Text>
                   </TouchableOpacity>
-                )}
-              />
-
+                ))}
+              </ScrollView>
               <TouchableOpacity
-                style={styles.modalCloseButton}
                 onPress={() => setModalVisible(false)}
+                style={styles.closeButton}
               >
-                <Text style={styles.modalCloseText}>Tancar</Text>
+                <Text style={styles.closeButtonText}>Tancar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -347,42 +318,42 @@ const styles = StyleSheet.create({
   challengeName: { fontSize: 14, color: 'white', textAlign: 'center' },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     padding: 20,
   },
   modalContent: {
     backgroundColor: '#3a2f2f',
-    borderRadius: 15,
-    padding: 15,
+    borderRadius: 12,
+    padding: 20,
     maxHeight: '80%',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 15,
+    marginBottom: 12,
     textAlign: 'center',
   },
-  avatarOptionWrapper: {
-    flex: 1 / 3,
-    padding: 5,
-    alignItems: 'center',
-  },
   avatarOption: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2,
-    borderColor: 'white',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#5a4a4a',
   },
-  modalCloseButton: {
-    marginTop: 10,
-    alignSelf: 'center',
+  avatarOptionText: {
+    color: 'white',
+    fontSize: 16,
   },
-  modalCloseText: {
-    color: '#007bff',
-    fontSize: 18,
+  closeButton: {
+    marginTop: 15,
+    paddingVertical: 10,
+    backgroundColor: '#007bff',
+    borderRadius: 8,
+  },
+  closeButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
 
