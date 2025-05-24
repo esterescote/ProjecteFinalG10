@@ -18,26 +18,45 @@ import { supabase } from '../lib/supabase';
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 const defaultHeader = 'https://i.imgur.com/2yHBo8a.jpg';
 
+type Challenge = {
+  id: string;
+  name: string;
+  image: string;
+};
+
+type Avatar = {
+  id: string;
+  image: string;
+};
+
+type Profile = {
+  id: string;
+  username: string;
+  email: string;
+  avatar_url?: string;
+  profile_picture?: string;
+  header_picture?: string; // Afegeix això
+  xp?: number;
+  favourite_films?: string[];
+};
+
+
 const ProfileScreen = () => {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [editingUsername, setEditingUsername] = useState(false);
-  const [usernameEdit, setUsernameEdit] = useState('');
-  const [currentChallenges, setCurrentChallenges] = useState([]);
-  const [avatars, setAvatars] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [editingUsername, setEditingUsername] = useState<boolean>(false);
+  const [usernameEdit, setUsernameEdit] = useState<string>('');
+  const [currentChallenges, setCurrentChallenges] = useState<Challenge[]>([]);
+  const [avatars, setAvatars] = useState<Avatar[]>([]);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
 
   useEffect(() => {
-    loadAvatars();
+    const loadData = async () => {
+      await loadAvatars();
+      await loadProfile();
+    };
+    loadData();
   }, []);
-
-  useEffect(() => {
-    loadProfile();
-  }, [avatars]);
-
-  useEffect(() => {
-    if (profile?.id) fetchCurrentChallenges();
-  }, [profile]);
 
   const loadAvatars = async () => {
     const { data, error } = await supabase.from('avatars').select('id, image');
@@ -46,16 +65,17 @@ const ProfileScreen = () => {
       return;
     }
 
-    // Mapear a URLs públiques
-    const avatarsWithUrl = data.map((avatar) => {
-      const { publicUrl } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(avatar.image);
-      return {
-        id: avatar.id,
-        image: publicUrl,
-      };
-    });
+    const avatarsWithUrl = await Promise.all(
+      data.map(async (avatar) => {
+        const { data: publicData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(avatar.image);
+        return {
+          id: avatar.id,
+          image: publicData?.publicUrl ?? defaultAvatar,
+        };
+      })
+    );
 
     setAvatars(avatarsWithUrl);
   };
@@ -84,23 +104,29 @@ const ProfileScreen = () => {
       return;
     }
 
-    // Si profile_picture és un id d'avatar, agafem la URL corresponent
     let profilePictureUrl = defaultAvatar;
     if (data?.profile_picture) {
       const avatar = avatars.find((a) => a.id === data.profile_picture);
       if (avatar) profilePictureUrl = avatar.image;
     }
 
-    setProfile({ ...data, profile_picture: profilePictureUrl });
+   setProfile({
+  ...data,
+  email: session.user.email,
+  profile_picture: profilePictureUrl,
+  favourite_films: data?.favourite_films ?? [],
+});
+
     setUsernameEdit(data?.username ?? '');
+    await fetchCurrentChallenges(session.user.id);
     setLoading(false);
   };
 
-  const fetchCurrentChallenges = async () => {
+  const fetchCurrentChallenges = async (userId: string) => {
     const { data: userChallenges, error } = await supabase
       .from('user_challenges')
       .select('challenge_id')
-      .eq('user_id', profile.id);
+      .eq('user_id', userId);
 
     if (error) {
       console.log(error);
@@ -138,7 +164,7 @@ const ProfileScreen = () => {
     setEditingUsername(false);
   };
 
-  const handleSelectAvatar = async (avatarId, avatarUrl) => {
+  const handleSelectAvatar = async (avatarId: string, avatarUrl: string) => {
     if (!profile?.id) return;
 
     const { error } = await supabase
@@ -152,7 +178,6 @@ const ProfileScreen = () => {
       return;
     }
 
-    // Actualitzar localment
     setProfile({ ...profile, profile_picture: avatarUrl });
     setModalVisible(false);
   };
@@ -197,7 +222,7 @@ const ProfileScreen = () => {
             </>
           ) : (
             <View style={styles.usernameRow}>
-              <Text style={styles.username}>{profile?.username ?? 'John Doe'}</Text>
+              <Text style={styles.username}>{profile?.email ?? 'Usuari anònim'}</Text>
               <TouchableOpacity onPress={() => setEditingUsername(true)}>
                 <Text style={styles.editIcon}>✏️</Text>
               </TouchableOpacity>
@@ -208,15 +233,16 @@ const ProfileScreen = () => {
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
         <Text style={styles.section}>Pel·lícules preferides</Text>
-        {profile?.favourite_films?.length > 0 ? (
-          profile.favourite_films.map((film, index) => (
-            <Text key={index} style={styles.itemText}>
-              🎬 {film}
-            </Text>
-          ))
-        ) : (
-          <Text style={styles.noItems}>Encara no tens cap pel·lícula preferida.</Text>
-        )}
+        {profile?.favourite_films && profile.favourite_films.length > 0 ? (
+  profile.favourite_films.map((film, index) => (
+    <Text key={index} style={styles.itemText}>
+      🎬 {film}
+    </Text>
+  ))
+) : (
+  <Text style={styles.noItems}>Encara no tens cap pel·lícula preferida.</Text>
+)}
+
 
         <Text style={styles.section}>Reptes actuals</Text>
         {currentChallenges.length === 0 ? (
