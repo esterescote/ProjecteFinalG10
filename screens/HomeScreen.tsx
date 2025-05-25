@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  SafeAreaView,
+} from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,19 +25,38 @@ type HomeScreenProps = {
 };
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const [email, setEmail] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchUserEmail = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (data?.user?.email) {
-        setEmail(data.user.email);
-      } else if (error) {
-        console.error('Error getting user:', error.message);
+    const fetchUserProfile = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error('Error getting user:', userError.message);
+        return;
+      }
+
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username, profile_picture')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching profile:', error.message);
+        } else {
+          setUsername(data.username);
+          setProfilePicture(data.profile_picture);
+        }
       }
     };
 
-    fetchUserEmail();
+    fetchUserProfile();
   }, []);
 
   return (
@@ -37,10 +64,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.username}>{email ? `${email}` : ''}</Text>
+          <Text style={styles.username}>{username ?? ''}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
             <Image
-              source={{ uri: 'https://i.imgur.com/4YQF2kR.png' }}
+              source={{
+                uri: profilePicture ?? 'https://i.imgur.com/4YQF2kR.png',
+              }}
               style={styles.avatar}
             />
           </TouchableOpacity>
@@ -53,38 +82,58 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
         >
-
           {/* Secció 1 */}
           <Text style={styles.sectionTitle}>New Challenges</Text>
           <View style={styles.separator} />
-          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('NewChallenges')}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('NewChallenges')}
+          >
             <Image
-              source={{ uri: 'https://cdn.hobbyconsolas.com/sites/navi.axelspringer.es/public/media/image/2016/09/pulp-fiction.jpg?tf=3840x' }}
+              source={{
+                uri: 'https://cdn.hobbyconsolas.com/sites/navi.axelspringer.es/public/media/image/2016/09/pulp-fiction.jpg?tf=3840x',
+              }}
               style={styles.cardImage}
             />
-            <Text style={styles.cardText}>Start existing challenges or create your own</Text>
+            <Text style={styles.cardText}>
+              Start existing challenges or create your own
+            </Text>
           </TouchableOpacity>
 
           {/* Secció 2 */}
           <Text style={styles.sectionTitle}>My Challenges</Text>
           <View style={styles.separator} />
-          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('MyChallenges')}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('MyChallenges')}
+          >
             <Image
-              source={{ uri: 'https://www.eyeforfilm.co.uk/images/newsite/the-shawshank-redemption_600.webp' }}
+              source={{
+                uri: 'https://www.eyeforfilm.co.uk/images/newsite/the-shawshank-redemption_600.webp',
+              }}
               style={styles.cardImage}
             />
-            <Text style={styles.cardText}>Check the status of your current challenge</Text>
+            <Text style={styles.cardText}>
+              Check the status of your current challenge
+            </Text>
           </TouchableOpacity>
 
           {/* Secció 3 */}
           <Text style={styles.sectionTitle}>My Progress</Text>
           <View style={styles.separator} />
-          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Progress')}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('Progress')}
+          >
             <Image
-              source={{ uri: 'https://estaticos-cdn.prensaiberica.es/clip/0877e41a-8bb1-460f-81fc-61ce2e292193_source-aspect-ratio_default_0.jpg' }}
+              source={{
+                uri: 'https://estaticos-cdn.prensaiberica.es/clip/0877e41a-8bb1-460f-81fc-61ce2e292193_source-aspect-ratio_default_0.jpg',
+              }}
               style={styles.cardImage}
             />
-            <Text style={styles.cardText}>Your progress, points, challenges completed, movies watched...</Text>
+            <Text style={styles.cardText}>
+              Your progress, points, challenges completed, movies watched...
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -136,6 +185,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 999,
+    backgroundColor: '#555',
   },
   welcome: {
     fontSize: 24,

@@ -11,6 +11,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  FlatList,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 
@@ -33,11 +34,37 @@ type Profile = {
   favourite_films?: string[];
 };
 
-type Avatar = {
-  id: number;
+type AvatarOption = {
+  id: string;
+  uri: string;
   name: string;
-  avatar_url: string; // URL completa de la imatge
 };
+
+const avatarOptions: AvatarOption[] = [
+  { id: '1', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/darthvader.jpeg', name: 'Darth Vader' },
+  { id: '2', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/clarkkent.jpg', name: 'Clark Kent' },
+  { id: '3', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/eleven.jpg', name: 'Eleven' },
+  { id: '4', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/ethanhunt.jpg', name: 'Ethan Hunt' },
+  { id: '5', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/et.jpg', name: 'E.T.' },
+  { id: '6', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/hermionegranger.jpg', name: 'Hermione Granger' },
+  { id: '7', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/peterparker.jpeg', name: 'Peter Parker' },
+  { id: '8', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/professorlangdon.jpeg', name: 'Professor Langdon' },
+  { id: '9', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/thor.jpeg', name: 'Thor' },
+  { id: '10', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/avatars/vincentvega.jpeg', name: 'Vincent Vega' },
+];
+
+const headerOptions: AvatarOption[] = [
+  { id: '1', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/dc.jpg', name: 'DC Comics' },
+  { id: '2', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/dune.jpg', name: 'Dune' },
+  { id: '4', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/grease.jpg', name: 'Grease' },
+  { id: '7', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/hobbit.png', name: 'The Hobbit' },
+  { id: '5', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/jaws.jpg', name: 'Jaws' },
+  { id: '6', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/killbill.jpg', name: 'Kill Bill' },
+  { id: '7', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/lordrings.png', name: 'The Lord of the Rings' },
+  { id: '8', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/marvel.png', name: 'Marvel' },
+  { id: '9', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/sw.jpeg', name: 'Star Wars' },
+  { id: '10', uri: 'https://wlaumweodxeqrwktfqlg.supabase.co/storage/v1/object/public/profile-images/headers/terminator.jpg', name: '' },
+];
 
 const ProfileScreen = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -45,12 +72,13 @@ const ProfileScreen = () => {
   const [editingUsername, setEditingUsername] = useState<boolean>(false);
   const [usernameEdit, setUsernameEdit] = useState<string>('');
   const [currentChallenges, setCurrentChallenges] = useState<Challenge[]>([]);
-  const [avatars, setAvatars] = useState<Avatar[]>([]);
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const [headerModalVisible, setHeaderModalVisible] = useState(false);
+  const [updatingAvatar, setUpdatingAvatar] = useState(false);
+  const [updatingHeader, setUpdatingHeader] = useState(false);
 
   useEffect(() => {
     loadProfile();
-    loadAvatars();
   }, []);
 
   const loadProfile = async () => {
@@ -86,15 +114,6 @@ const ProfileScreen = () => {
     setUsernameEdit(data?.username ?? '');
     await fetchCurrentChallenges(session.user.id);
     setLoading(false);
-  };
-
-  const loadAvatars = async () => {
-    const { data, error } = await supabase.from('avatars').select('*');
-    if (error) {
-      console.log('Error carregant avatars:', error.message);
-      return;
-    }
-    setAvatars(data);
   };
 
   const fetchCurrentChallenges = async (userId: string) => {
@@ -139,23 +158,46 @@ const ProfileScreen = () => {
     setEditingUsername(false);
   };
 
-  const handleAvatarSelect = async (avatar: Avatar) => {
+  const handleAvatarSelect = async (avatarUri: string) => {
     if (!profile?.id) return;
+    setUpdatingAvatar(true);
 
-    // Actualitza a Supabase
     const { error } = await supabase
       .from('profiles')
-      .update({ profile_picture: avatar.avatar_url })
+      .update({ profile_picture: avatarUri })
       .eq('id', profile.id);
 
     if (error) {
       console.log(error);
-      return Alert.alert('Error', "No s'ha pogut actualitzar la imatge de perfil.");
+      Alert.alert('Error', "No s'ha pogut actualitzar la imatge de perfil.");
+      setUpdatingAvatar(false);
+      return;
     }
 
-    // Actualitza l'estat local per refrescar la imatge
-    setProfile({ ...profile, profile_picture: avatar.avatar_url });
-    setModalVisible(false);
+    setProfile({ ...profile, profile_picture: avatarUri });
+    setAvatarModalVisible(false);
+    setUpdatingAvatar(false);
+  };
+
+  const handleHeaderSelect = async (headerUri: string) => {
+    if (!profile?.id) return;
+    setUpdatingHeader(true);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ header_picture: headerUri })
+      .eq('id', profile.id);
+
+    if (error) {
+      console.log(error);
+      Alert.alert('Error', "No s'ha pogut actualitzar la imatge de capçalera.");
+      setUpdatingHeader(false);
+      return;
+    }
+
+    setProfile({ ...profile, header_picture: headerUri });
+    setHeaderModalVisible(false);
+    setUpdatingHeader(false);
   };
 
   if (loading) {
@@ -169,20 +211,21 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Image
-          source={{ uri: profile?.header_picture || defaultHeader }}
-          style={styles.headerImg}
-        />
-
-        <TouchableOpacity
-          style={styles.avatarWrapper}
-          onPress={() => setModalVisible(true)}
-        >
+        <TouchableOpacity onPress={() => setHeaderModalVisible(true)}>
           <Image
-            source={{ uri: profile?.profile_picture || defaultAvatar }}
-            style={styles.avatar}
+            source={{ uri: profile?.header_picture || defaultHeader }}
+            style={styles.headerImg}
           />
         </TouchableOpacity>
+
+        <View style={styles.avatarWrapper}>
+          <TouchableOpacity onPress={() => setAvatarModalVisible(true)}>
+            <Image
+              source={{ uri: profile?.profile_picture || defaultAvatar }}
+              style={styles.avatar}
+            />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.usernameWrapper}>
           {editingUsername ? (
@@ -191,6 +234,7 @@ const ProfileScreen = () => {
                 value={usernameEdit}
                 onChangeText={setUsernameEdit}
                 style={styles.usernameInput}
+                autoFocus
               />
               <TouchableOpacity onPress={handleSaveUsername}>
                 <Text style={styles.saveButton}>Desar</Text>
@@ -233,25 +277,87 @@ const ProfileScreen = () => {
           </ScrollView>
         )}
 
-        {/* Modal per escollir avatar */}
-        <Modal visible={modalVisible} animationType="slide" transparent={true}>
+        {/* Modal per triar avatar */}
+        <Modal
+          visible={avatarModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setAvatarModalVisible(false)}
+        >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Escull la teva imatge de perfil</Text>
-              <ScrollView>
-                {avatars.map((avatar) => (
-                  <TouchableOpacity
-                    key={avatar.id}
-                    onPress={() => handleAvatarSelect(avatar)}
-                    style={styles.avatarOption}
-                  >
-                    <Text style={styles.avatarOptionText}>{avatar.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {updatingAvatar ? (
+                <ActivityIndicator size="large" color="white" />
+              ) : (
+                <FlatList
+                  data={avatarOptions}
+                  keyExtractor={(item) => item.id}
+                  numColumns={5}
+                  columnWrapperStyle={styles.columnWrapper}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={{ alignItems: 'center', marginBottom: 10 }}
+                      onPress={() => handleAvatarSelect(item.uri)}
+                    >
+                      <Image source={{ uri: item.uri }} style={styles.avatarOption} />
+                      <Text
+                        style={styles.avatarText}
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                      >
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
               <TouchableOpacity
-                onPress={() => setModalVisible(false)}
                 style={styles.closeButton}
+                onPress={() => setAvatarModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>Tancar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal per triar header */}
+        <Modal
+          visible={headerModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setHeaderModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              {updatingHeader ? (
+                <ActivityIndicator size="large" color="white" />
+              ) : (
+                <FlatList
+                  data={headerOptions}
+                  keyExtractor={(item) => item.id}
+                  numColumns={2}
+                  columnWrapperStyle={styles.columnWrapper}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={{ alignItems: 'center', marginBottom: 10 }}
+                      onPress={() => handleHeaderSelect(item.uri)}
+                    >
+                      <Image source={{ uri: item.uri }} style={styles.headerOption} />
+                      <Text
+                        style={styles.avatarText}
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                      >
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setHeaderModalVisible(false)}
               >
                 <Text style={styles.closeButtonText}>Tancar</Text>
               </TouchableOpacity>
@@ -314,46 +420,57 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  challengeImage: { width: 80, height: 80, borderRadius: 10, marginBottom: 8 },
-  challengeName: { fontSize: 14, color: 'white', textAlign: 'center' },
+  challengeImage: { width: 80, height: 80, borderRadius: 12, marginBottom: 8 },
+  challengeName: { color: 'white', textAlign: 'center' },
+
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.75)',
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
   },
   modalContent: {
-    backgroundColor: '#3a2f2f',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: '#4a3d3d',
+    borderRadius: 10,
     maxHeight: '80%',
+    padding: 15,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 12,
-    textAlign: 'center',
+  columnWrapper: {
+    justifyContent: 'space-around',
   },
   avatarOption: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#5a4a4a',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderColor: 'white',
+    borderWidth: 1,
+    marginHorizontal: 5,
   },
-  avatarOptionText: {
+  headerOption: {
+    width: 150,
+    height: 80,
+    borderRadius: 12,
+    borderColor: 'white',
+    borderWidth: 1,
+    marginHorizontal: 5,
+  },
+  avatarText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 10,
+    marginTop: 3,
+    width: 60,
+    textAlign: 'center',
   },
   closeButton: {
     marginTop: 15,
-    paddingVertical: 10,
-    backgroundColor: '#007bff',
+    backgroundColor: '#222',
     borderRadius: 8,
+    paddingVertical: 10,
   },
   closeButtonText: {
     color: 'white',
     textAlign: 'center',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });
 
