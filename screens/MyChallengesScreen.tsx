@@ -12,7 +12,8 @@ import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-const { width, height } = Dimensions.get('window');
+
+const { width } = Dimensions.get('window');
 
 type RootStackParamList = {
   Home: undefined;
@@ -20,6 +21,7 @@ type RootStackParamList = {
   MyChallenges: undefined;
   Progress: undefined;
   Profile: undefined;
+  'challenge-details': { id: string };
 };
 
 type MyChallengesScreenProps = {
@@ -55,16 +57,23 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
       if (userChallengesError) console.log('Error fetching user_challenges:', userChallengesError);
       if (challengesError) console.log('Error fetching challenges:', challengesError);
 
-      setUserChallenges(userChallengesData || []);
-      setChallenges(challengesData || []);
-
       if (userChallengesData && challengesData) {
-        const completed = userChallengesData.filter((uc) => {
-          const challenge = challengesData.find((c) => c.id === uc.challenge_id);
-          return challenge && uc.status === challenge.number_films;
-        });
-        setCompletedUserChallenges(completed);
-      }
+  setChallenges(challengesData);
+
+  const completed = userChallengesData.filter((uc) => {
+    const challenge = challengesData.find((c) => c.id === uc.challenge_id);
+    return challenge && uc.status === challenge.number_films;
+  });
+
+  const current = userChallengesData.filter((uc) => {
+    const challenge = challengesData.find((c) => c.id === uc.challenge_id);
+    return challenge && uc.status < challenge.number_films;
+  });
+
+  setUserChallenges(current);
+  setCompletedUserChallenges(completed);
+}
+
 
       setLoading(false);
     };
@@ -79,7 +88,11 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
     if (!challenge) return null;
 
     return (
-      <View style={styles.cardSmall} key={card.id}>
+      <TouchableOpacity
+        style={styles.cardSmall}
+        key={card.id}
+        onPress={() => navigation.navigate('challenge-details', { id: challenge.id })}
+      >
         <View style={styles.imagePlaceholder} />
         <View style={styles.cardContentSmall}>
           <Text style={styles.cardLabel}>Challenge</Text>
@@ -97,7 +110,7 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
             {card.status} / {challenge.number_films} movies
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -111,13 +124,17 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
             style={[styles.toggleButton, activeTab === 'current' && styles.activeToggleButton]}
             onPress={() => setActiveTab('current')}
           >
-            <Text style={[styles.toggleButtonText, activeTab === 'current' && styles.activeToggleButtonText]}>Current Challenges</Text>
+            <Text style={[styles.toggleButtonText, activeTab === 'current' && styles.activeToggleButtonText]}>
+              Current Challenges
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.toggleButton, activeTab === 'completed' && styles.activeToggleButton]}
             onPress={() => setActiveTab('completed')}
           >
-            <Text style={[styles.toggleButtonText, activeTab === 'completed' && styles.activeToggleButtonText]}>Completed Challenges</Text>
+            <Text style={[styles.toggleButtonText, activeTab === 'completed' && styles.activeToggleButtonText]}>
+              Completed Challenges
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -138,20 +155,36 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
             ) : completedUserChallenges.length === 0 ? (
               <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>No completed challenges found.</Text>
             ) : (
-              <View style={styles.completedCardsContainer}>
-                {completedUserChallenges.map((uc) => {
-                  const challenge = findChallenge(uc.challenge_id);
-                  if (!challenge) return null;
-                  return (
-                    <View style={styles.completedCardSmall} key={uc.id}>
-                      <Text style={styles.completedCardText}>{challenge.name}</Text>
-                      <View style={styles.xpTag}>
-                        <Text style={styles.xpText}>{challenge.number_films} XP</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
+              <View style={styles.currentScrollContainer}>
+  {completedUserChallenges.map((uc) => {
+    const challenge = findChallenge(uc.challenge_id);
+    if (!challenge) return null;
+    return (
+      <TouchableOpacity
+        style={styles.cardSmall}
+        key={uc.id}
+        onPress={() => navigation.navigate('challenge-details', { id: challenge.id })}
+      >
+        <View style={styles.imagePlaceholder} />
+        <View style={styles.cardContentSmall}>
+          <Text style={styles.cardLabel}>Challenge</Text>
+          <Text style={styles.cardTitle}>{challenge.name}</Text>
+          <Text style={styles.cardProgressLabel}>Completed:</Text>
+          <View style={styles.progressBar}>
+            <View style={[styles.progress, { width: '100%' }]} />
+          </View>
+          <Text style={{ color: '#ccc', marginTop: 5, fontSize: 12 }}>
+            {challenge.number_films} / {challenge.number_films} movies
+          </Text>
+          <View style={{ marginTop: 8, backgroundColor: '#800020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>{challenge.number_films} XP</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  })}
+</View>
+
             )}
           </ScrollView>
         )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator, FlatList, TouchableOpacity, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
 
@@ -230,31 +230,34 @@ const toggleWatched = async (tmdbMovieId: number) => {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{challenge.name}</Text>
-      <Image source={{ uri: challenge.image }} style={styles.image} />
-      <Text style={styles.description}>{challenge.description}</Text>
+  <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <Text style={styles.title}>{challenge.name}</Text>
+    <Image source={{ uri: challenge.image }} style={styles.image} />
+    <Text style={styles.description}>{challenge.description}</Text>
 
-      <Text style={styles.sectionTitle}>Pel·lícules per completar aquest repte</Text>
+    <Text style={styles.sectionTitle}>Pel·lícules per completar aquest repte</Text>
 
-      {loadingMovies ? (
-        <View style={styles.loadingMoviesContainer}>
-          <ActivityIndicator size="small" color="#888" />
-          <Text style={styles.loadingText}>Carregant pel·lícules...</Text>
-        </View>
-      ) : movies.length > 0 ? (
-        <FlatList
-          data={movies}
-          renderItem={renderMovieItem}
-          keyExtractor={(item) => item.id.toString()}
-          horizontal={false}
-          showsVerticalScrollIndicator={false}
-        />
-      ) : (
-        <Text style={styles.noMoviesText}>No hi ha pel·lícules disponibles per aquest repte</Text>
-      )}
-    </View>
-  );
+    {loadingMovies ? (
+      <View style={styles.loadingMoviesContainer}>
+        <ActivityIndicator size="small" color="#888" />
+        <Text style={styles.loadingText}>Carregant pel·lícules...</Text>
+      </View>
+    ) : movies.length > 0 ? (
+      <FlatList
+        data={movies}
+        renderItem={renderMovieItem}
+        keyExtractor={(item) => item.id.toString()}
+        horizontal={false}
+        scrollEnabled={false}  // <--- DESACTIVEM el scroll intern
+        showsVerticalScrollIndicator={false}
+      />
+    ) : (
+      <Text style={styles.noMoviesText}>No hi ha pel·lícules disponibles per aquest repte</Text>
+    )}
+  </ScrollView>
+
+  
+);
 };
 
 const styles = StyleSheet.create({
@@ -262,7 +265,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1e1e1e',
     padding: 20,
-    paddingTop: 60,
   },
   centered: {
     flex: 1,
