@@ -15,11 +15,11 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useRouter } from 'expo-router';
 
-// Tipus de navegació
 type RootStackParamList = {
   Home: undefined;
   MyChallenges: undefined;
   NewChallenges: undefined;
+  CreateChallenge: undefined; // Añadido aquí
   Progress: undefined;
   Profile: undefined;
   'challenge-details': { id: string };
@@ -81,32 +81,32 @@ const NewChallengesScreen: React.FC = () => {
   };
 
   const handleAddChallenge = async (challengeId: string) => {
-  if (!userId) return;
+    if (!userId) return;
 
-  const challenge = challenges.find((c) => c.id === challengeId);
-  if (!challenge) {
-    setMessage('Challenge not found');
+    const challenge = challenges.find((c) => c.id === challengeId);
+    if (!challenge) {
+      setMessage('Challenge not found');
+      setModalVisible(true);
+      return;
+    }
+
+    const { error } = await supabase.from('user_challenges').insert([{
+      user_id: userId,
+      challenge_id: challengeId,
+      name: challenge.name,
+      status: 0,
+      start_date: new Date().toISOString(),
+      end_date: null,
+    }]);
+
+    if (error) {
+      setMessage(`Error: ${error.message}`);
+    } else {
+      updateChallengeState(challengeId, true);
+      setMessage('Challenge added correctly!');
+    }
     setModalVisible(true);
-    return;
-  }
-
-  const { error } = await supabase.from('user_challenges').insert([{
-    user_id: userId,
-    challenge_id: challengeId,
-    name: challenge.name, // 👈 aquí afegeixes el nom
-    status: 0,
-    start_date: new Date().toISOString(),
-    end_date: null,
-  }]);
-
-  if (error) {
-    setMessage(`Error: ${error.message}`);
-  } else {
-    updateChallengeState(challengeId, true);
-    setMessage('Challenge added correctly!');
-  }
-  setModalVisible(true);
-};
+  };
 
   const handleRemoveChallenge = async (challengeId: string) => {
     if (!userId) return;
@@ -178,6 +178,13 @@ const NewChallengesScreen: React.FC = () => {
         <Text style={styles.title}>Challenges List</Text>
         <Text style={styles.subtitle}>List of existing challenges to get started</Text>
 
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => navigation.navigate('CreateChallenge')}
+        >
+          <Text style={styles.createButtonText}>+ Create New Challenge</Text>
+        </TouchableOpacity>
+
         <FlatList
           data={challenges}
           renderItem={renderItem}
@@ -245,6 +252,18 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     marginBottom: 30,
+  },
+  createButton: {
+    backgroundColor: '#FFDD95',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  createButtonText: {
+    color: '#1e1e1e',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   challengeContainer: {
     marginBottom: 20,

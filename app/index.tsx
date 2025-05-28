@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '../screens/HomeScreen';  // Verifica que estas rutas sean correctas
-import NewChallengesScreen from '../screens/NewChallengesScreen';
+import HomeScreen from '../screens/HomeScreen';
+import NewChallengesScreen from '../screens/NewChallengesScreen'; // pantalla lista retos
+import CreateChallengeScreen from '../screens/CreateChallengeScreen'; // pantalla creación reto
 import MyChallengesScreen from '../screens/MyChallengesScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import LoginScreen from '../screens/login';
@@ -9,7 +10,8 @@ import ProfileScreen from '../screens/ProfileScreen';
 export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
-  NewChallenges: undefined;
+  NewChallenges: undefined; // lista retos
+  CreateChallenge: undefined; // creación reto
   MyChallenges: undefined;
   Progress: undefined;
   Profile: undefined;
@@ -32,8 +34,13 @@ export default function Index() {
       />
       <Stack.Screen 
         name="NewChallenges" 
-        component={NewChallengesScreen} 
+        component={NewChallengesScreen}  // <-- aquí lista retos
         options={{ title: 'New Challenges' }} 
+      />
+      <Stack.Screen 
+        name="CreateChallenge" 
+        component={CreateChallengeScreen}  // <-- pantalla creación reto
+        options={{ title: 'Create Challenge' }} 
       />
       <Stack.Screen 
         name="MyChallenges" 
