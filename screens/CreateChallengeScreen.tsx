@@ -69,7 +69,7 @@ export default function CreateChallengeScreen({ navigation }: any) {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setError('Usuario no autenticado.');
+        setError('User not found');
         setCreating(false);
         return;
       }
@@ -97,7 +97,7 @@ export default function CreateChallengeScreen({ navigation }: any) {
         navigation.navigate('Home');
       }
     } catch (err) {
-      setError('Error al crear el reto.');
+      setError('Error to create the challenge');
       console.error(err);
     } finally {
       setCreating(false);
@@ -127,37 +127,37 @@ export default function CreateChallengeScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Nombre del reto</Text>
+      <Text style={styles.label}>Challenge name</Text>
       <TextInput
         style={styles.input}
         value={name}
         onChangeText={setName}
-        placeholder="Ejemplo: Reto de películas de acción"
+        placeholder="Example: Action movies challenge"
         placeholderTextColor="#aaa"
       />
 
-      <Text style={styles.label}>Descripción</Text>
+      <Text style={styles.label}>Description</Text>
       <TextInput
         style={[styles.input, { height: 80 }]}
         value={description}
         onChangeText={setDescription}
-        placeholder="Describe tu reto"
+        placeholder="Describe your challenge"
         multiline
         placeholderTextColor="#aaa"
       />
 
-      <Text style={styles.label}>Buscar películas para añadir al reto</Text>
+      <Text style={styles.label}>Search movies to add to your challenge</Text>
       <View style={{ flexDirection: 'row', marginBottom: 10 }}>
         <TextInput
           style={[styles.input, { flex: 1 }]}
           value={searchKeyword}
           onChangeText={setSearchKeyword}
-          placeholder="Palabra clave de película"
+          placeholder="Keyword to find films"
           placeholderTextColor="#aaa"
           onSubmitEditing={searchMovies}
           returnKeyType="search"
         />
-        <Button title="Buscar" onPress={searchMovies} disabled={loadingMovies} />
+        <Button title="Search" onPress={searchMovies} disabled={loadingMovies} />
       </View>
 
       {loadingMovies && <ActivityIndicator size="small" color="#800000" style={{ marginBottom: 10 }} />}
@@ -170,9 +170,9 @@ export default function CreateChallengeScreen({ navigation }: any) {
         style={{ maxHeight: 200, marginBottom: 20 }}
       />
 
-      <Text style={styles.label}>Películas seleccionadas</Text>
+      <Text style={styles.label}>Selected movies</Text>
       {selectedMovies.length === 0 ? (
-        <Text style={{ color: '#ccc', marginBottom: 20 }}>No has seleccionado ninguna película.</Text>
+        <Text style={{ color: '#ccc', marginBottom: 20 }}>You have not selected any movie.</Text>
       ) : (
         <FlatList
           data={selectedMovies}
@@ -189,7 +189,7 @@ export default function CreateChallengeScreen({ navigation }: any) {
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <Button title={creating ? 'Creando...' : 'Crear reto'} onPress={createChallenge} disabled={creating} />
+      <Button title={creating ? 'Creating...' : 'Create challenge'} onPress={createChallenge} disabled={creating} />
     </View>
   );
 }

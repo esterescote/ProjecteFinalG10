@@ -62,7 +62,7 @@ export default function ProgressScreen() {
         .in('id', challengeIds);
 
       if (challengeError) {
-        console.error('Error al obtener los challenges:', challengeError);
+        console.error('Error to obtain challenges:', challengeError);
         setLoading(false);
         return;
       }
@@ -86,8 +86,8 @@ export default function ProgressScreen() {
     fetchData();
   }, []);
 
-  if (loading) return <Text style={styles.text}>Cargando...</Text>;
-  if (!challenges.length) return <Text style={styles.text}>No tienes retos asignados.</Text>;
+  if (loading) return <Text style={styles.text}>Loading...</Text>;
+  if (!challenges.length) return <Text style={styles.text}>You do not have any assigned challenge.</Text>;
 
   // Retos completados
   const completedChallengesCount = challenges.filter(challenge => {
@@ -133,115 +133,117 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.screen}>
-        <Text style={styles.title}>General Progress</Text>
-        <Text style={styles.subtitle}>LEVEL 1</Text>
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.screen}>
+          <Text style={styles.title}>General Progress</Text>
+          <Text style={styles.subtitle}>LEVEL 1</Text>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, styles.centeredText]}>
-            You’ve completed {completedChallengesCount} Challenges!
-          </Text>
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground} />
-            <View
-              style={[
-                styles.progressBarForeground,
-                { width: `${(completedChallengesCount / challenges.length) * 100}%` },
-              ]}
-            />
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, styles.centeredText]}>
+              You've completed {completedChallengesCount} Challenges!
+            </Text>
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBackground} />
+              <View
+                style={[
+                  styles.progressBarForeground,
+                  { width: `${(completedChallengesCount / challenges.length) * 100}%` },
+                ]}
+              />
+            </View>
+
+            {/* Mostrar retos, todos o solo 2 según showAllChallenges */}
+            <View style={styles.cardsContainer}>
+              {(showAllChallenges ? challenges : challenges.slice(0, 2)).map((challenge) => {
+                const watched = watchedCounts[challenge.id] || 0;
+                const total = challenge.number_films || 0;
+                return (
+                  <View key={challenge.id} style={styles.card}>
+                    <Text style={styles.cardTitle}>{challenge.name}</Text>
+                    <Text>
+                      Watched films: {watched} / {total}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            {challenges.length > 2 && (
+              <TouchableOpacity onPress={() => setShowAllChallenges(!showAllChallenges)}>
+                <Text style={[styles.seeAllText, styles.leftAlign]}>
+                  {showAllChallenges ? 'Show less' : 'See all'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Mostrar retos, todos o solo 2 según showAllChallenges */}
-          <View style={styles.cardsContainer}>
-            {(showAllChallenges ? challenges : challenges.slice(0, 2)).map((challenge) => {
-              const watched = watchedCounts[challenge.id] || 0;
-              const total = challenge.number_films || 0;
-              return (
-                <View key={challenge.id} style={styles.card}>
-                  <Text style={styles.cardTitle}>{challenge.name}</Text>
-                  <Text>
-                    Películas vistas: {watched} / {total}
-                  </Text>
+          <View style={styles.separator} />
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, styles.centeredText]}>
+              You've got {earnedBadges.length} Badges!
+            </Text>
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBackground} />
+              <View style={[styles.progressBarForeground, { width: `${(earnedBadges.length / badges.length) * 100}%` }]} />
+            </View>
+
+            {/* Mostrar badges, todos o solo 2 según showAllBadges */}
+            <View style={styles.badgesContainer}>
+              {(showAllBadges ? earnedBadges : earnedBadges.slice(0, 2)).map(({ emoji, title, description }, index) => (
+                <View key={index} style={styles.badge}>
+                  <Text style={styles.badgeEmoji}>{emoji}</Text>
+                  <View style={styles.badgeTextContainer}>
+                    <Text style={styles.badgeText}>{title}</Text>
+                    <Text style={styles.badgeDescription}>{description}</Text>
+                  </View>
                 </View>
-              );
-            })}
-          </View>
-          {challenges.length > 2 && (
-            <TouchableOpacity onPress={() => setShowAllChallenges(!showAllChallenges)}>
-              <Text style={[styles.seeAllText, styles.leftAlign]}>
-                {showAllChallenges ? 'Show less' : 'See all'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, styles.centeredText]}>
-            You’ve got {earnedBadges.length} Badges!
-          </Text>
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground} />
-            <View style={[styles.progressBarForeground, { width: `${(earnedBadges.length / badges.length) * 100}%` }]} />
+              ))}
+            </View>
+            {earnedBadges.length > 2 && (
+              <TouchableOpacity onPress={() => setShowAllBadges(!showAllBadges)}>
+                <Text style={[styles.seeAllText, styles.leftAlign]}>
+                  {showAllBadges ? 'Show less' : 'See all'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Mostrar badges, todos o solo 2 según showAllBadges */}
-          <View style={styles.badgesContainer}>
-            {(showAllBadges ? earnedBadges : earnedBadges.slice(0, 2)).map(({ emoji, title, description }, index) => (
-              <View key={index} style={styles.badge}>
-                <Text style={styles.badgeEmoji}>{emoji}</Text>
-                <View style={styles.badgeTextContainer}>
-                  <Text style={styles.badgeText}>{title}</Text>
-                  <Text style={styles.badgeDescription}>{description}</Text>
-                </View>
+          <View style={styles.separator} />
+
+          <Text style={[styles.sectionTitle, styles.centeredText]}>Your Stats</Text>
+          <View style={styles.statContainer}>
+            <View style={styles.leftColumn}>
+              <Text style={styles.leftText}>Films Watched</Text>
+            </View>
+            <View style={styles.middleColumn}>
+              <View style={styles.barChart}>
+                {[80, 60, 40, 20, 0].map((topPos) => (
+                  <View key={topPos} style={[styles.horizontalLine, { top: topPos }]} />
+                ))}
+                {weekProgress.map((value, index) => (
+                  <View key={index} style={[styles.bar, { height: value * 20 }]} />
+                ))}
               </View>
-            ))}
-          </View>
-          {earnedBadges.length > 2 && (
-            <TouchableOpacity onPress={() => setShowAllBadges(!showAllBadges)}>
-              <Text style={[styles.seeAllText, styles.leftAlign]}>
-                {showAllBadges ? 'Show less' : 'See all'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.separator} />
-
-        <Text style={[styles.sectionTitle, styles.centeredText]}>Your Stats</Text>
-        <View style={styles.statContainer}>
-          <View style={styles.leftColumn}>
-            <Text style={styles.leftText}>Films Watched</Text>
-          </View>
-          <View style={styles.middleColumn}>
-            <View style={styles.barChart}>
-              {[80, 60, 40, 20, 0].map((topPos) => (
-                <View key={topPos} style={[styles.horizontalLine, { top: topPos }]} />
-              ))}
-              {weekProgress.map((value, index) => (
-                <View key={index} style={[styles.bar, { height: value * 20 }]} />
-              ))}
+              <View style={styles.daysOfWeek}>
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+                  <Text key={i} style={styles.dayText}>
+                    {day}
+                  </Text>
+                ))}
+              </View>
             </View>
-            <View style={styles.daysOfWeek}>
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-                <Text key={i} style={styles.dayText}>
-                  {day}
-                </Text>
-              ))}
+            <View style={styles.rightColumn}>
+              <View style={styles.numbersColumn}>
+                {[0, 1, 2, 3, 4, 5].map((num) => (
+                  <Text key={num} style={styles.numberText}>
+                    {num}
+                  </Text>
+                ))}
+              </View>
             </View>
           </View>
-          <View style={styles.rightColumn}>
-            <View style={styles.numbersColumn}>
-              {[0, 1, 2, 3, 4, 5].map((num) => (
-                <Text key={num} style={styles.numberText}>
-                  {num}
-                </Text>
-              ))}
-            </View>
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       <View style={styles.bottomNav}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
@@ -267,7 +269,10 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0C0F14',
+    backgroundColor: '#1e1e1e',
+  },
+  container: {
+    flex: 1,
   },
   screen: {
     padding: 20,
@@ -423,16 +428,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#0C0F14',
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 10,
-    borderTopColor: '#333',
-    borderTopWidth: 1,
+    alignItems: 'center',
+    backgroundColor: '#2b2323',
+    paddingVertical: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
   },
   text: {
     flex: 1,

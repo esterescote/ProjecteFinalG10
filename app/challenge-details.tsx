@@ -235,12 +235,12 @@ const toggleWatched = async (tmdbMovieId: number) => {
     <Image source={{ uri: challenge.image }} style={styles.image} />
     <Text style={styles.description}>{challenge.description}</Text>
 
-    <Text style={styles.sectionTitle}>Pel·lícules per completar aquest repte</Text>
+    <Text style={styles.sectionTitle}>Films to complete this challenge</Text>
 
     {loadingMovies ? (
       <View style={styles.loadingMoviesContainer}>
         <ActivityIndicator size="small" color="#888" />
-        <Text style={styles.loadingText}>Carregant pel·lícules...</Text>
+        <Text style={styles.loadingText}>Loading films...</Text>
       </View>
     ) : movies.length > 0 ? (
       <FlatList
@@ -248,11 +248,11 @@ const toggleWatched = async (tmdbMovieId: number) => {
         renderItem={renderMovieItem}
         keyExtractor={(item) => item.id.toString()}
         horizontal={false}
-        scrollEnabled={false}  // <--- DESACTIVEM el scroll intern
+        scrollEnabled={false} 
         showsVerticalScrollIndicator={false}
       />
     ) : (
-      <Text style={styles.noMoviesText}>No hi ha pel·lícules disponibles per aquest repte</Text>
+      <Text style={styles.noMoviesText}>There's no films available for this</Text>
     )}
   </ScrollView>
 

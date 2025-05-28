@@ -235,7 +235,16 @@ const styles = StyleSheet.create({
   completedCardText: { color: 'white', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
   xpTag: { marginTop: 5, backgroundColor: '#800020', paddingVertical: 3, paddingHorizontal: 7, borderRadius: 15 },
   xpText: { fontWeight: 'bold', fontSize: 14, color: 'white' },
-  bottomNav: { height: 60, backgroundColor: '#1e1e1e', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#2b2323',
+    paddingVertical: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+  },
 });
 
 export default MyChallengesScreen;

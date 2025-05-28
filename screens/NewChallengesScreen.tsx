@@ -19,7 +19,7 @@ type RootStackParamList = {
   Home: undefined;
   MyChallenges: undefined;
   NewChallenges: undefined;
-  CreateChallenge: undefined; // Añadido aquí
+  CreateChallenge: undefined; 
   Progress: undefined;
   Profile: undefined;
   'challenge-details': { id: string };

@@ -14,6 +14,19 @@ import {
   FlatList,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
+type RootStackParamList = {
+  Home: undefined;
+  MyChallenges: undefined;
+  NewChallenges: undefined;
+  CreateChallenge: undefined; 
+  Progress: undefined;
+  Profile: undefined;
+  'challenge-details': { id: string };
+};
 
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 const defaultHeader = 'https://i.imgur.com/2yHBo8a.jpg';
@@ -76,6 +89,8 @@ const ProfileScreen = () => {
   const [headerModalVisible, setHeaderModalVisible] = useState(false);
   const [updatingAvatar, setUpdatingAvatar] = useState(false);
   const [updatingHeader, setUpdatingHeader] = useState(false);
+
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     loadProfile();
@@ -169,7 +184,7 @@ const ProfileScreen = () => {
 
     if (error) {
       console.log(error);
-      Alert.alert('Error', "No s'ha pogut actualitzar la imatge de perfil.");
+      Alert.alert('Error', "Could not update your profile picture.");
       setUpdatingAvatar(false);
       return;
     }
@@ -190,7 +205,7 @@ const ProfileScreen = () => {
 
     if (error) {
       console.log(error);
-      Alert.alert('Error', "No s'ha pogut actualitzar la imatge de capçalera.");
+      Alert.alert('Error', "Could not update your header picture.");
       setUpdatingHeader(false);
       return;
     }
@@ -237,7 +252,7 @@ const ProfileScreen = () => {
                 autoFocus
               />
               <TouchableOpacity onPress={handleSaveUsername}>
-                <Text style={styles.saveButton}>Desar</Text>
+                <Text style={styles.saveButton}>Save</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -252,7 +267,7 @@ const ProfileScreen = () => {
 
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
-        <Text style={styles.section}>Pel·lícules preferides</Text>
+        <Text style={styles.section}>Favourite films</Text>
         {profile?.favourite_films && profile.favourite_films.length > 0 ? (
           profile.favourite_films.map((film, index) => (
             <Text key={index} style={styles.itemText}>
@@ -260,12 +275,12 @@ const ProfileScreen = () => {
             </Text>
           ))
         ) : (
-          <Text style={styles.noItems}>Encara no tens cap pel·lícula preferida.</Text>
+          <Text style={styles.noItems}>You do not have favourite films</Text>
         )}
 
-        <Text style={styles.section}>Reptes actuals</Text>
+        <Text style={styles.section}>Current Challenges</Text>
         {currentChallenges.length === 0 ? (
-          <Text style={styles.noItems}>No estàs fent cap repte actualment.</Text>
+          <Text style={styles.noItems}>You do not have any current challenge.</Text>
         ) : (
           <ScrollView horizontal contentContainerStyle={styles.horizontalList}>
             {currentChallenges.map((challenge) => (
@@ -359,12 +374,31 @@ const ProfileScreen = () => {
                 style={styles.closeButton}
                 onPress={() => setHeaderModalVisible(false)}
               >
-                <Text style={styles.closeButtonText}>Tancar</Text>
+                <Text style={styles.closeButtonText}>Exit</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
       </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('MyChallenges')}>
+          <Ionicons name="calendar" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('NewChallenges')}>
+          <Ionicons name="add-circle" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Progress')}>
+          <Ionicons name="trophy" size={26} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person" size={30} color="#FFDD95" />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -471,6 +505,16 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     fontWeight: '600',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#2b2323',
+    paddingVertical: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
   },
 });
 
