@@ -30,6 +30,7 @@ type Challenge = {
   name: string;
   description: string;
   image: string;
+  number_films: number;
   added: boolean;
 };
 
@@ -54,10 +55,11 @@ const NewChallengesScreen: React.FC = () => {
   };
 
   const fetchChallenges = async (userId: string) => {
+    // ✅ MODIFICADO: Solo obtener retos por defecto (user_id es null) y los creados por el usuario actual
     const { data: challengeData, error: challengeError } = await supabase
       .from('challenges')
       .select('*')
-      .or(`user_id.is.null,user_id.eq.${userId}`); // 👈 CORREGIDO AQUÍ
+      .or(`user_id.is.null,user_id.eq.${userId}`);
 
     if (challengeError) {
       console.error('Error loading challenges:', challengeError.message);
@@ -78,6 +80,10 @@ const NewChallengesScreen: React.FC = () => {
 
     const mergedChallenges = challengeData.map((challenge: any) => ({
       ...challenge,
+      // ✅ VALOR POR DEFECTO: Si no tiene number_films, usar la longitud de tmdb_movie_ids
+      number_films: challenge.number_films || (challenge.tmdb_movie_ids ? challenge.tmdb_movie_ids.length : 1),
+      // ✅ IMAGEN POR DEFECTO: Si no tiene imagen, usar una por defecto
+      image: challenge.image || 'https://via.placeholder.com/300x450/800020/ffffff?text=Custom+Challenge',
       added: addedChallengeIds.includes(challenge.id),
     }));
 
@@ -141,6 +147,10 @@ const NewChallengesScreen: React.FC = () => {
       <Text style={styles.challengeTitle}>{item.name}</Text>
       <Image source={{ uri: item.image }} style={styles.image} />
       <Text style={styles.description}>{item.description}</Text>
+      
+      {/* ✅ AÑADIDO: Mostrar número de películas */}
+      <Text style={styles.movieCount}>{item.number_films} movies</Text>
+      
       <View style={styles.separator} />
       <View style={styles.buttonRow}>
         <TouchableOpacity
@@ -290,6 +300,12 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 14,
     color: '#ccc',
+    marginBottom: 10,
+  },
+  movieCount: {
+    fontSize: 12,
+    color: '#FFDD95',
+    fontWeight: 'bold',
     marginBottom: 10,
   },
   separator: {
