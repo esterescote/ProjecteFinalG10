@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   StyleSheet,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -56,9 +57,10 @@ export default function ProgressScreen() {
 
       const challengeIds = userChallenges.map((uc) => uc.challenge_id);
 
+      // Updated to include the image field
       const { data: challengeData, error: challengeError } = await supabase
         .from('challenges')
-        .select('*')
+        .select('id, name, number_films, image')
         .in('id', challengeIds);
 
       if (challengeError) {
@@ -125,126 +127,157 @@ export default function ProgressScreen() {
       condition: completedChallengesCount >= 5,
     },
   ];
-
   const earnedBadges = badges.filter(badge => badge.condition);
 
-  // Semana de progreso para gráfico (dummy, puedes hacer dinámico)
+  // Semana de progreso para gráfico
   const weekProgress = [1, 1, 0, 1, 2, 4, 2];
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.screen}>
-          <Text style={styles.title}>General Progress</Text>
-          <Text style={styles.subtitle}>LEVEL 1</Text>
+        <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>General Progress</Text>
+            <Text style={styles.subtitle}>LEVEL 1</Text>
+          </View>
 
+          {/* Challenges Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, styles.centeredText]}>
+            <Text style={styles.sectionTitle}>
               You've completed {completedChallengesCount} Challenges!
             </Text>
             <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBackground} />
               <View
                 style={[
                   styles.progressBarForeground,
-                  { width: `${(completedChallengesCount / challenges.length) * 100}%` },
+                  { width: `${Math.min((completedChallengesCount / challenges.length) * 100, 100)}%` },
                 ]}
               />
             </View>
 
-            {/* Mostrar retos, todos o solo 2 según showAllChallenges */}
-            <View style={styles.cardsContainer}>
+            <View style={showAllChallenges ? styles.cardsContainerGrid : styles.cardsContainer}>
               {(showAllChallenges ? challenges : challenges.slice(0, 2)).map((challenge) => {
                 const watched = watchedCounts[challenge.id] || 0;
                 const total = challenge.number_films || 0;
                 return (
-                  <View key={challenge.id} style={styles.card}>
+                  <View key={challenge.id} style={showAllChallenges ? styles.challengeCardGrid : styles.challengeCard}>
+                    {challenge.image ? (
+                      <Image 
+                        source={{ uri: challenge.image }} 
+                        style={styles.cardImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.cardImagePlaceholder} />
+                    )}
                     <Text style={styles.cardTitle}>{challenge.name}</Text>
-                    <Text>
-                      Watched films: {watched} / {total}
-                    </Text>
                   </View>
                 );
               })}
             </View>
+            
             {challenges.length > 2 && (
               <TouchableOpacity onPress={() => setShowAllChallenges(!showAllChallenges)}>
-                <Text style={[styles.seeAllText, styles.leftAlign]}>
+                <Text style={styles.seeAllText}>
                   {showAllChallenges ? 'Show less' : 'See all'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
 
+          {/* Separator */}
           <View style={styles.separator} />
 
+          {/* Badges Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, styles.centeredText]}>
+            <Text style={styles.sectionTitle}>
               You've got {earnedBadges.length} Badges!
             </Text>
             <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBackground} />
-              <View style={[styles.progressBarForeground, { width: `${(earnedBadges.length / badges.length) * 100}%` }]} />
+              <View 
+                style={[
+                  styles.progressBarForeground, 
+                  { width: `${Math.min((earnedBadges.length / badges.length) * 100, 100)}%` }
+                ]} 
+              />
             </View>
 
-            {/* Mostrar badges, todos o solo 2 según showAllBadges */}
             <View style={styles.badgesContainer}>
-              {(showAllBadges ? earnedBadges : earnedBadges.slice(0, 2)).map(({ emoji, title, description }, index) => (
+              {(showAllBadges ? earnedBadges : earnedBadges.slice(0, 4)).map(({ emoji, title, description }, index) => (
                 <View key={index} style={styles.badge}>
-                  <Text style={styles.badgeEmoji}>{emoji}</Text>
+                  <View>
+                    <Text style={styles.badgeEmoji}>{emoji}</Text>
+                  </View>
                   <View style={styles.badgeTextContainer}>
-                    <Text style={styles.badgeText}>{title}</Text>
+                    <Text style={styles.badgeTitle}>{title}</Text>
                     <Text style={styles.badgeDescription}>{description}</Text>
                   </View>
                 </View>
               ))}
             </View>
-            {earnedBadges.length > 2 && (
+            
+            {earnedBadges.length > 4 && (
               <TouchableOpacity onPress={() => setShowAllBadges(!showAllBadges)}>
-                <Text style={[styles.seeAllText, styles.leftAlign]}>
+                <Text style={styles.seeAllText}>
                   {showAllBadges ? 'Show less' : 'See all'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
 
+          {/* Separator */}
           <View style={styles.separator} />
 
-          <Text style={[styles.sectionTitle, styles.centeredText]}>Your Stats</Text>
-          <View style={styles.statContainer}>
-            <View style={styles.leftColumn}>
-              <Text style={styles.leftText}>Films Watched</Text>
-            </View>
-            <View style={styles.middleColumn}>
-              <View style={styles.barChart}>
-                {[80, 60, 40, 20, 0].map((topPos) => (
-                  <View key={topPos} style={[styles.horizontalLine, { top: topPos }]} />
-                ))}
-                {weekProgress.map((value, index) => (
-                  <View key={index} style={[styles.bar, { height: value * 20 }]} />
-                ))}
+          {/* Stats Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Stats</Text>
+            <View style={styles.statsContainer}>
+              <View style={styles.statsLeftColumn}>
+                <Text style={styles.statsLabel}>Films{'\n'}watched</Text>
               </View>
-              <View style={styles.daysOfWeek}>
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-                  <Text key={i} style={styles.dayText}>
-                    {day}
-                  </Text>
-                ))}
+              <View style={styles.statsChartContainer}>
+                <View style={styles.chartArea}>
+                  <View style={styles.chartGrid}>
+                    {[0, 1, 2, 3, 4].map((line) => (
+                      <View key={line} style={styles.gridLine} />
+                    ))}
+                  </View>
+                  <View style={styles.barsContainer}>
+                    {weekProgress.map((value, index) => (
+                      <View key={index} style={styles.barWrapper}>
+                        <View 
+                          style={[
+                            styles.bar, 
+                            { 
+                              height: Math.max(value * 15, 8),
+                              backgroundColor: value > 0 ? '#4ADE80' : '#374151'
+                            }
+                          ]} 
+                        />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.daysRow}>
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+                    <Text key={i} style={styles.dayLabel}>{day}</Text>
+                  ))}
+                </View>
               </View>
-            </View>
-            <View style={styles.rightColumn}>
-              <View style={styles.numbersColumn}>
-                {[0, 1, 2, 3, 4, 5].map((num) => (
-                  <Text key={num} style={styles.numberText}>
-                    {num}
-                  </Text>
-                ))}
+              <View style={styles.statsRightColumn}>
+                <View style={styles.numbersColumn}>
+                  {[4, 3, 2, 1, 0].map((num) => (
+                    <Text key={num} style={styles.numberLabel}>{num}</Text>
+                  ))}
+                </View>
               </View>
             </View>
           </View>
         </ScrollView>
       </View>
 
+      {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Ionicons name="home" size={26} color="white" />
@@ -269,7 +302,7 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#3a2f2f',
   },
   container: {
     flex: 1,
@@ -278,8 +311,12 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     color: 'white',
     fontWeight: 'bold',
     marginBottom: 8,
@@ -287,65 +324,88 @@ const styles = StyleSheet.create({
   subtitle: {
     color: '#FFDD95',
     fontSize: 18,
-    marginBottom: 20,
+    fontWeight: '600',
+    letterSpacing: 2,
   },
   section: {
     marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     color: 'white',
-    marginBottom: 10,
-  },
-  centeredText: {
+    fontWeight: '600',
     textAlign: 'center',
+    marginBottom: 20,
   },
   progressBarContainer: {
-    height: 10,
-    backgroundColor: '#1F1F1F',
-    borderRadius: 5,
-    marginBottom: 10,
+    height: 8,
+    backgroundColor: '#374151',
+    borderRadius: 10,
+    marginBottom: 20,
     overflow: 'hidden',
-  },
-  progressBarBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#1F1F1F',
   },
   progressBarForeground: {
     height: '100%',
-    backgroundColor: '#FFDD95',
+    backgroundColor: '#4ADE80',
+    borderRadius: 10,
   },
   cardsContainer: {
     flexDirection: 'row',
-    gap: 10,
+    justifyContent: 'space-between',
+    gap: 15,
+    marginBottom: 15,
   },
-  card: {
+  cardsContainerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 15,
+    marginBottom: 15,
+  },
+  challengeCard: {
     flex: 1,
-    backgroundColor: '#1F1F1F',
-    padding: 12,
-    borderRadius: 10,
-    marginRight: 10,
+    backgroundColor: '#2D2D2D',
+    borderRadius: 12,
+    padding: 0,
+    overflow: 'hidden',
+  },
+  challengeCardGrid: {
+    width: (width - 55) / 2, // Account for padding and gap
+    backgroundColor: '#2D2D2D',
+    borderRadius: 12,
+    padding: 0,
+    overflow: 'hidden',
+    marginBottom: 15,
+  },
+  cardImage: {
+    height: 120,
+    width: '100%',
+    marginBottom: 12,
+  },
+  cardImagePlaceholder: {
+    height: 120,
+    backgroundColor: '#800020',
+    marginBottom: 12,
   },
   cardTitle: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 12,
   },
   seeAllText: {
     color: '#FFDD95',
-    fontSize: 14,
-  },
-  leftAlign: {
-    textAlign: 'left',
-    marginTop: 10,
+    fontSize: 16,
+    fontWeight: '500',
   },
   separator: {
     height: 1,
-    backgroundColor: '#333',
-    marginVertical: 20,
+    backgroundColor: '#404040',
+    marginVertical: 10,
   },
-  badgesContainer: {
+   badgesContainer: {
     gap: 15,
     marginTop: 10,
   },
@@ -361,81 +421,104 @@ const styles = StyleSheet.create({
   badgeTextContainer: {
     flex: 1,
   },
-  badgeText: {
+  badgeTitle: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    marginBottom: 2,
   },
   badgeDescription: {
-    color: '#AAA',
-    fontSize: 13,
+    color: '#9CA3AF',
+    fontSize: 14,
   },
-  statContainer: {
+  statsContainer: {
     flexDirection: 'row',
-    marginTop: 20,
+    alignItems: 'center',
+    marginTop: 10,
   },
-  leftColumn: {
-    flex: 2,
-    justifyContent: 'center',
+  statsLeftColumn: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
-  leftText: {
-    color: '#AAA',
+  statsLabel: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    textAlign: 'left',
+    lineHeight: 18,
   },
-  middleColumn: {
-    flex: 4,
+  statsChartContainer: {
+    flex: 3,
     alignItems: 'center',
   },
-  barChart: {
-    width: 120,
-    height: 80,
+  chartArea: {
+    width: 160,
+    height: 100,
     position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  horizontalLine: {
+  chartGrid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  gridLine: {
     position: 'absolute',
     left: 0,
     right: 0,
-    borderTopColor: '#333',
-    borderTopWidth: 1,
+    height: 1,
+    backgroundColor: '#374151',
+  },
+  barsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: '100%',
+    paddingHorizontal: 8,
+  },
+  barWrapper: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    height: '100%',
   },
   bar: {
-    width: 10,
-    backgroundColor: '#FFDD95',
-    borderRadius: 5,
+    width: 12,
+    borderRadius: 6,
+    minHeight: 8,
   },
-  daysOfWeek: {
+  daysRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
-    width: 120,
+    width: 160,
+    paddingHorizontal: 8,
   },
-  dayText: {
-    color: '#FFDD95',
-    fontWeight: 'bold',
+  dayLabel: {
+    color: 'white',
     fontSize: 12,
+    fontWeight: '600',
   },
-  rightColumn: {
+  statsRightColumn: {
     flex: 1,
+    alignItems: 'flex-end',
   },
   numbersColumn: {
+    height: 100,
     justifyContent: 'space-between',
-    height: 80,
+    alignItems: 'flex-end',
   },
-  numberText: {
-    color: '#AAA',
-    fontSize: 10,
+  numberLabel: {
+    color: '#9CA3AF',
+    fontSize: 12,
   },
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#2b2323',
+    backgroundColor: '#2D2D2D',
     paddingVertical: 12,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    width: '100%',
   },
   text: {
     flex: 1,

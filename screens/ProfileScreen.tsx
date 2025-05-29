@@ -31,6 +31,12 @@ type RootStackParamList = {
 const defaultAvatar = 'https://i.imgur.com/4YQF2kR.png';
 const defaultHeader = 'https://i.imgur.com/2yHBo8a.jpg';
 
+// Añade tu API key de TMDB aquí
+const TMDB_API_KEY = '4d3cb710ab798774158802e72c50dfa2';
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+
+
 type Challenge = {
   id: string;
   name: string;
@@ -51,6 +57,14 @@ type AvatarOption = {
   id: string;
   uri: string;
   name: string;
+};
+
+type TMDBMovie = {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string;
+  overview: string;
 };
 
 const avatarOptions: AvatarOption[] = [
@@ -89,6 +103,12 @@ const ProfileScreen = () => {
   const [headerModalVisible, setHeaderModalVisible] = useState(false);
   const [updatingAvatar, setUpdatingAvatar] = useState(false);
   const [updatingHeader, setUpdatingHeader] = useState(false);
+  
+  // Estados para el buscador de películas
+  const [movieSearchVisible, setMovieSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<TMDBMovie[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
@@ -215,6 +235,89 @@ const ProfileScreen = () => {
     setUpdatingHeader(false);
   };
 
+  // Funciones para el buscador de películas
+  const searchMovies = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await fetch(
+        `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=es-ES`
+      );
+      const data = await response.json();
+      setSearchResults(data.results || []);
+    } catch (error) {
+      console.error('Error searching movies:', error);
+      Alert.alert('Error', 'No se pudieron buscar las películas');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const addFavouriteFilm = async (movie: TMDBMovie) => {
+    if (!profile?.id) return;
+    
+    const currentFilms = profile.favourite_films || [];
+    
+    if (currentFilms.length >= 4) {
+      Alert.alert('Límite alcanzado', 'Solo puedes tener un máximo de 4 películas favoritas');
+      return;
+    }
+
+    if (currentFilms.includes(movie.title)) {
+      Alert.alert('Película duplicada', 'Esta película ya está en tus favoritas');
+      return;
+    }
+
+    const updatedFilms = [...currentFilms, movie.title];
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ favourite_films: updatedFilms })
+      .eq('id', profile.id);
+
+    if (error) {
+      console.log(error);
+      Alert.alert('Error', 'No se pudo añadir la película');
+      return;
+    }
+
+    setProfile({ ...profile, favourite_films: updatedFilms });
+    setMovieSearchVisible(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const removeFavouriteFilm = async (filmToRemove: string) => {
+    if (!profile?.id) return;
+
+    const updatedFilms = (profile.favourite_films || []).filter(film => film !== filmToRemove);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ favourite_films: updatedFilms })
+      .eq('id', profile.id);
+
+    if (error) {
+      console.log(error);
+      Alert.alert('Error', 'No se pudo eliminar la película');
+      return;
+    }
+
+    setProfile({ ...profile, favourite_films: updatedFilms });
+  };
+
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      searchMovies(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(delayedSearch);
+  }, [searchQuery]);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -267,12 +370,28 @@ const ProfileScreen = () => {
 
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
-        <Text style={styles.section}>Favourite films</Text>
+        {/* Sección de películas favoritas con buscador */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.section}>Favourite films</Text>
+          <TouchableOpacity 
+            onPress={() => setMovieSearchVisible(true)}
+            style={styles.searchButton}
+          >
+            <Ionicons name="search" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+
         {profile?.favourite_films && profile.favourite_films.length > 0 ? (
           profile.favourite_films.map((film, index) => (
-            <Text key={index} style={styles.itemText}>
-              🎬 {film}
-            </Text>
+            <View key={index} style={styles.filmItem}>
+              <Text style={styles.itemText}>🎬 {film}</Text>
+              <TouchableOpacity 
+                onPress={() => removeFavouriteFilm(film)}
+                style={styles.removeButton}
+              >
+                <Ionicons name="close-circle" size={20} color="#ff6b6b" />
+              </TouchableOpacity>
+            </View>
           ))
         ) : (
           <Text style={styles.noItems}>You do not have favourite films</Text>
@@ -282,17 +401,85 @@ const ProfileScreen = () => {
         {currentChallenges.length === 0 ? (
           <Text style={styles.noItems}>You do not have any current challenge.</Text>
         ) : (
-          <ScrollView horizontal contentContainerStyle={styles.horizontalList}>
+          <ScrollView horizontal contentContainerStyle={styles.horizontalList} showsHorizontalScrollIndicator={true}>
             {currentChallenges.map((challenge) => (
-              <View key={challenge.id} style={styles.challengePill}>
+              <TouchableOpacity 
+                key={challenge.id} 
+                style={styles.challengePill}
+                onPress={() => navigation.navigate('challenge-details', { id: challenge.id })}
+              >
                 <Image source={{ uri: challenge.image }} style={styles.challengeImage} />
-                <Text style={styles.challengeName}>{challenge.name}</Text>
-              </View>
+                <View style={styles.challengeOverlay}>
+                  <Text style={styles.challengeName}>{challenge.name}</Text>
+                </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         )}
 
-        {/* Modal per triar avatar */}
+        {/* Modal de buscador de películas */}
+        <Modal
+          visible={movieSearchVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setMovieSearchVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.searchModalContent}>
+              <View style={styles.searchHeader}>
+                <Text style={styles.searchTitle}>Buscar películas</Text>
+                <TouchableOpacity onPress={() => setMovieSearchVisible(false)}>
+                  <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+              
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Busca una película..."
+                placeholderTextColor="#aaa"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+              />
+
+              {searchLoading ? (
+                <ActivityIndicator size="large" color="white" style={styles.searchLoader} />
+              ) : (
+                <FlatList
+                  data={searchResults}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity 
+                      style={styles.movieItem}
+                      onPress={() => addFavouriteFilm(item)}
+                    >
+                      <Image 
+                        source={{ 
+                          uri: item.poster_path 
+                            ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}` 
+                            : 'https://via.placeholder.com/500x750?text=No+Image'
+                        }}
+                        style={styles.moviePoster}
+                      />
+                      <View style={styles.movieInfo}>
+                        <Text style={styles.movieTitle}>{item.title}</Text>
+                        <Text style={styles.movieYear}>
+                          {item.release_date ? new Date(item.release_date).getFullYear() : 'N/A'}
+                        </Text>
+                        <Text style={styles.movieOverview} numberOfLines={3}>
+                          {item.overview || 'Sin descripción disponible'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.searchResults}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal para triar avatar */}
         <Modal
           visible={avatarModalVisible}
           transparent
@@ -336,7 +523,7 @@ const ProfileScreen = () => {
           </View>
         </Modal>
 
-        {/* Modal per triar header */}
+        {/* Modal para triar header */}
         <Modal
           visible={headerModalVisible}
           transparent
@@ -437,26 +624,75 @@ const styles = StyleSheet.create({
   saveButton: { color: '#007bff', marginTop: 5 },
   xp: { textAlign: 'center', color: 'white' },
   section: { fontSize: 18, margin: 20, color: 'white' },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  searchButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+  },
+  filmItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 6,
+  },
+  removeButton: {
+    padding: 4,
+  },
   noItems: { textAlign: 'center', color: 'white', marginBottom: 10 },
-  itemText: { color: 'white', paddingHorizontal: 20, marginBottom: 6 },
+  itemText: { color: 'white', flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  horizontalList: { paddingHorizontal: 20 },
+  horizontalList: { 
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
   challengePill: {
     marginRight: 15,
     alignItems: 'center',
-    backgroundColor: '#4a3d3d',
     borderRadius: 12,
-    padding: 10,
-    width: 120,
+    padding: 0,
+    width: 200,
+    height: 140,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    overflow: 'hidden',
   },
-  challengeImage: { width: 80, height: 80, borderRadius: 12, marginBottom: 8 },
-  challengeName: { color: 'white', textAlign: 'center' },
-
+  challengeImage: { 
+    width: '100%', 
+    height: '100%', 
+    borderRadius: 12,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  challengeOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  challengeName: { 
+    color: 'white', 
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.75)',
@@ -468,6 +704,71 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     maxHeight: '80%',
     padding: 15,
+  },
+  searchModalContent: {
+    backgroundColor: '#4a3d3d',
+    borderRadius: 10,
+    maxHeight: '90%',
+    padding: 15,
+    marginTop: 50,
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  searchTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  searchInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    color: 'white',
+    fontSize: 16,
+    marginBottom: 15,
+  },
+  searchLoader: {
+    marginTop: 50,
+  },
+  searchResults: {
+    flex: 1,
+  },
+  movieItem: {
+    flexDirection: 'row',
+    padding: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  moviePoster: {
+    width: 60,
+    height: 90,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  movieInfo: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  movieTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  movieYear: {
+    color: '#ccc',
+    fontSize: 14,
+    marginBottom: 6,
+  },
+  movieOverview: {
+    color: '#aaa',
+    fontSize: 12,
+    lineHeight: 16,
   },
   columnWrapper: {
     justifyContent: 'space-around',

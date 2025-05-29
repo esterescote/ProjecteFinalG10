@@ -233,7 +233,7 @@ const NewChallengesScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#3a2f2f',
   },
   container: {
     flex: 1,
