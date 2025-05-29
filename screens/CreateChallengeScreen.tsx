@@ -1,17 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  StyleSheet, 
-  FlatList, 
-  Image, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  SafeAreaView,
-  ScrollView 
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TextInput, Button, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 const TMDB_API_KEY = '4d3cb710ab798774158802e72c50dfa2';
@@ -66,12 +54,7 @@ export default function CreateChallengeScreen({ navigation }: any) {
   const createChallenge = async () => {
     setError('');
     if (!name.trim() || !description.trim()) {
-      setError('Please complete all fields.');
-      return;
-    }
-
-    if (selectedMovies.length === 0) {
-      setError('Please select at least one movie.');
+      setError('Por favor completa todos los campos.');
       return;
     }
 
@@ -85,18 +68,17 @@ export default function CreateChallengeScreen({ navigation }: any) {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setError('User not found');
+        setError('Usuario no autenticado.');
         setCreating(false);
         return;
       }
 
       const { error: supabaseError } = await supabase.from('challenges').insert([
         {
-          user_id: user.id,
+          user_id: user.id,        // Aquí se guarda el id del creador
           name: name.trim(),
           description: description.trim(),
           tmdb_movie_ids,
-          number_films: selectedMovies.length,
         },
       ]);
 
@@ -111,7 +93,7 @@ export default function CreateChallengeScreen({ navigation }: any) {
         navigation.navigate('Home');
       }
     } catch (err) {
-      setError('Error creating the challenge');
+      setError('Error al crear el reto.');
       console.error(err);
     } finally {
       setCreating(false);
@@ -132,403 +114,137 @@ export default function CreateChallengeScreen({ navigation }: any) {
           style={styles.moviePoster}
         />
         <View style={styles.movieInfo}>
-          <Text style={styles.movieTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.movieTitle}>{item.title}</Text>
           <Text style={styles.movieYear}>{item.release_date ? new Date(item.release_date).getFullYear() : 'N/A'}</Text>
-          {selected && (
-            <View style={styles.selectedBadge}>
-              <Ionicons name="checkmark-circle" size={20} color="#4ADE80" />
-            </View>
-          )}
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Challenge</Text>
-          <View style={styles.placeholder} />
-        </View>
+    <View style={styles.container}>
+      <Text style={styles.label}>Nombre del reto</Text>
+      <TextInput
+        style={styles.input}
+        value={name}
+        onChangeText={setName}
+        placeholder="Ejemplo: Reto de películas de acción"
+        placeholderTextColor="#aaa"
+      />
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Challenge Info Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Challenge Details</Text>
-            
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Challenge Name</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Example: Action Movies Challenge"
-                placeholderTextColor="#9CA3AF"
-              />
-            </View>
+      <Text style={styles.label}>Descripción</Text>
+      <TextInput
+        style={[styles.input, { height: 80 }]}
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Describe tu reto"
+        multiline
+        placeholderTextColor="#aaa"
+      />
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Describe your challenge..."
-                multiline
-                numberOfLines={4}
-                placeholderTextColor="#9CA3AF"
-                textAlignVertical="top"
-              />
-            </View>
-          </View>
-
-          {/* Movie Search Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Add Movies</Text>
-            
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputContainer}>
-                <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInput}
-                  value={searchKeyword}
-                  onChangeText={setSearchKeyword}
-                  placeholder="Search for movies..."
-                  placeholderTextColor="#9CA3AF"
-                  onSubmitEditing={searchMovies}
-                  returnKeyType="search"
-                />
-              </View>
-              <TouchableOpacity 
-                style={styles.searchButton} 
-                onPress={searchMovies} 
-                disabled={loadingMovies}
-              >
-                {loadingMovies ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text style={styles.searchButtonText}>Search</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {movieResults.length > 0 && (
-              <View style={styles.resultsContainer}>
-                <Text style={styles.resultsTitle}>Search Results</Text>
-                <FlatList
-                  data={movieResults}
-                  renderItem={renderMovieItem}
-                  keyExtractor={(item) => item.id.toString()}
-                  style={styles.moviesList}
-                  showsVerticalScrollIndicator={false}
-                />
-              </View>
-            )}
-          </View>
-
-          {/* Selected Movies Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Selected Movies ({selectedMovies.length})
-            </Text>
-            {selectedMovies.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="film-outline" size={48} color="#9CA3AF" />
-                <Text style={styles.emptyStateText}>No movies selected yet</Text>
-                <Text style={styles.emptyStateSubtext}>Search and select movies to add to your challenge</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={selectedMovies}
-                renderItem={({ item }) => (
-                  <View style={styles.selectedMovieItem}>
-                    <Image
-                      source={{
-                        uri: item.poster_path ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}` : 'https://via.placeholder.com/40x60',
-                      }}
-                      style={styles.selectedMoviePoster}
-                    />
-                    <View style={styles.selectedMovieInfo}>
-                      <Text style={styles.selectedMovieTitle} numberOfLines={1}>{item.title}</Text>
-                      <Text style={styles.selectedMovieYear}>
-                        {item.release_date ? new Date(item.release_date).getFullYear() : 'N/A'}
-                      </Text>
-                    </View>
-                    <TouchableOpacity 
-                      onPress={() => toggleSelectMovie(item)}
-                      style={styles.removeButton}
-                    >
-                      <Ionicons name="close-circle" size={20} color="#800020" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                keyExtractor={(item) => item.id.toString()}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
-          </View>
-
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={20} color="#EF4444" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-        </ScrollView>
-
-        {/* Create Button */}
-        <View style={styles.footer}>
-          <TouchableOpacity 
-            style={[styles.createButton, creating && styles.createButtonDisabled]} 
-            onPress={createChallenge} 
-            disabled={creating}
-          >
-            {creating ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <>
-                <Ionicons name="add-circle-outline" size={20} color="white" />
-                <Text style={styles.createButtonText}>Create Challenge</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+      <Text style={styles.label}>Buscar películas para añadir al reto</Text>
+      <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+        <TextInput
+          style={[styles.input, { flex: 1 }]}
+          value={searchKeyword}
+          onChangeText={setSearchKeyword}
+          placeholder="Palabra clave de película"
+          placeholderTextColor="#aaa"
+          onSubmitEditing={searchMovies}
+          returnKeyType="search"
+        />
+        <Button title="Buscar" onPress={searchMovies} disabled={loadingMovies} />
       </View>
-    </SafeAreaView>
+
+      {loadingMovies && <ActivityIndicator size="small" color="#800000" style={{ marginBottom: 10 }} />}
+
+      <FlatList
+        data={movieResults}
+        renderItem={renderMovieItem}
+        keyExtractor={(item) => item.id.toString()}
+        horizontal={false}
+        style={{ maxHeight: 200, marginBottom: 20 }}
+      />
+
+      <Text style={styles.label}>Películas seleccionadas</Text>
+      {selectedMovies.length === 0 ? (
+        <Text style={{ color: '#ccc', marginBottom: 20 }}>No has seleccionado ninguna película.</Text>
+      ) : (
+        <FlatList
+          data={selectedMovies}
+          renderItem={({ item }) => (
+            <View style={styles.selectedMovieItem}>
+              <Text style={{ color: 'white' }}>{item.title}</Text>
+            </View>
+          )}
+          keyExtractor={(item) => item.id.toString()}
+          horizontal
+          style={{ marginBottom: 20 }}
+        />
+      )}
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      <Button title={creating ? 'Creando...' : 'Crear reto'} onPress={createChallenge} disabled={creating} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#3a2f2f',
-  },
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#404040',
-  },
-  title: {
-    fontSize: 20,
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign:'center',
-  },
-  placeholder: {
-    width: 34,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  section: {
-    marginVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    color: 'white',
-    fontWeight: '600',
-    marginBottom: 15,
-  },
-  inputContainer: {
-    marginBottom: 15,
+    padding: 20,
+    backgroundColor: '#1e1e1e',
   },
   label: {
-    color: '#FFDD95',
-    fontWeight: '600',
-    marginBottom: 8,
-    fontSize: 14,
+    color: 'white',
+    fontWeight: 'bold',
+    marginBottom: 6,
   },
   input: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#2e2e2e',
     color: 'white',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#404040',
-  },
-  textArea: {
-    minHeight: 100,
-    paddingTop: 12,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 15,
-  },
-  searchInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2D2D2D',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#404040',
-  },
-  searchIcon: {
-    marginLeft: 16,
-  },
-  searchInput: {
-    flex: 1,
-    color: 'white',
+    borderRadius: 6,
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  searchButton: {
-    backgroundColor: '#800020',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  searchButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  resultsContainer: {
-    marginTop: 10,
-  },
-  resultsTitle: {
-    color: '#9CA3AF',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 10,
-  },
-  moviesList: {
-    maxHeight: 300,
+    paddingVertical: 8,
+    marginBottom: 12,
   },
   movieCard: {
     flexDirection: 'row',
-    marginBottom: 12,
-    backgroundColor: '#2D2D2D',
-    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: '#2e2e2e',
+    borderRadius: 6,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   movieCardSelected: {
-    borderColor: '#4ADE80',
+    borderColor: '#800000',
+    borderWidth: 2,
   },
   moviePoster: {
-    width: 60,
-    height: 90,
+    width: 80,
+    height: 120,
   },
   movieInfo: {
     flex: 1,
-    padding: 12,
-    justifyContent: 'center',
-    position: 'relative',
+    padding: 10,
   },
   movieTitle: {
     color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-    marginBottom: 4,
+    fontWeight: 'bold',
   },
   movieYear: {
-    color: '#9CA3AF',
-    fontSize: 12,
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    color: '#9CA3AF',
-    fontSize: 16,
-    fontWeight: '500',
-    marginTop: 12,
-  },
-  emptyStateSubtext: {
-    color: '#6B7280',
-    fontSize: 14,
-    textAlign: 'center',
+    color: '#ccc',
     marginTop: 4,
   },
   selectedMovieItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#800000',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-  },
-  selectedMoviePoster: {
-    width: 40,
-    height: 60,
-    borderRadius: 6,
-  },
-  selectedMovieInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  selectedMovieTitle: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  selectedMovieYear: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  removeButton: {
-    padding: 8,
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2D2D2D',
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#EF4444',
+    marginRight: 8,
   },
   errorText: {
-    color: '#EF4444',
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  footer: {
-    padding: 20,
-    paddingBottom: 30,
-  },
-  createButton: {
-    backgroundColor: '#800020',
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  createButtonDisabled: {
-    opacity: 0.6,
-  },
-  createButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: 'red',
+    marginBottom: 10,
   },
 });

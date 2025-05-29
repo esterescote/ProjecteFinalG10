@@ -19,7 +19,7 @@ type RootStackParamList = {
   Home: undefined;
   MyChallenges: undefined;
   NewChallenges: undefined;
-  CreateChallenge: undefined; 
+  CreateChallenge: undefined;
   Progress: undefined;
   Profile: undefined;
   'challenge-details': { id: string };
@@ -54,7 +54,11 @@ const NewChallengesScreen: React.FC = () => {
   };
 
   const fetchChallenges = async (userId: string) => {
-    const { data: challengeData, error: challengeError } = await supabase.from('challenges').select('*');
+    const { data: challengeData, error: challengeError } = await supabase
+      .from('challenges')
+      .select('*')
+      .or(`user_id.is.null,user_id.eq.${userId}`); // 👈 CORREGIDO AQUÍ
+
     if (challengeError) {
       console.error('Error loading challenges:', challengeError.message);
       return;
@@ -233,7 +237,7 @@ const NewChallengesScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#3a2f2f',
+    backgroundColor: '#1e1e1e',
   },
   container: {
     flex: 1,
