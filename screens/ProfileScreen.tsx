@@ -117,39 +117,43 @@ const ProfileScreen = () => {
   }, []);
 
   const loadProfile = async () => {
-    setLoading(true);
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
+  setLoading(true);
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
 
-    if (error || !session?.user) {
-      setLoading(false);
-      return;
-    }
-
-    const { data, error: dbErr } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-
-    if (dbErr) {
-      console.log(dbErr.message);
-      setLoading(false);
-      return;
-    }
-
-    setProfile({
-      ...data,
-      email: session.user.email,
-      favourite_films: data?.favourite_films ?? [],
-    });
-
-    setUsernameEdit(data?.username ?? '');
-    await fetchCurrentChallenges(session.user.id);
+  if (error || !session?.user) {
     setLoading(false);
-  };
+    return;
+  }
+
+  const { data, error: dbErr } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+
+  if (dbErr) {
+    console.log(dbErr.message);
+    setLoading(false);
+    return;
+  }
+
+  // Ensure favourite_films is always an array
+  const favouriteFilms = data?.favourite_films;
+  const validFavouriteFilms = Array.isArray(favouriteFilms) ? favouriteFilms : [];
+
+  setProfile({
+    ...data,
+    email: session.user.email,
+    favourite_films: validFavouriteFilms,
+  });
+
+  setUsernameEdit(data?.username ?? '');
+  await fetchCurrentChallenges(session.user.id);
+  setLoading(false);
+};
 
   const fetchCurrentChallenges = async (userId: string) => {
     const { data: userChallenges, error } = await supabase
