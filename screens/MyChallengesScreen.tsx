@@ -13,7 +13,6 @@ import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-
 const { width } = Dimensions.get('window');
 
 type RootStackParamList = {
@@ -51,7 +50,6 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
         .select('*')
         .eq('user_id', user.id);
 
-      // Updated to include the image field
       const { data: challengesData, error: challengesError } = await supabase
         .from('challenges')
         .select('id, name, number_films, image');
@@ -74,6 +72,23 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
 
         setUserChallenges(current);
         setCompletedUserChallenges(completed);
+
+        // Calcular la suma de XP i actualitzar la taula profiles
+        const totalXP = completed.reduce((sum, uc) => {
+          const challenge = challengesData.find((c) => c.id === uc.challenge_id);
+          return challenge ? sum + challenge.number_films : sum;
+        }, 0);
+
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ xp: totalXP })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.log('Error updating XP in profiles:', updateError);
+        } else {
+          console.log(`XP actualitzat correctament: ${totalXP} XP`);
+        }
       }
 
       setLoading(false);
@@ -252,11 +267,6 @@ const styles = StyleSheet.create({
   progressBar: { height: 10, backgroundColor: '#444', borderRadius: 20, width: '100%', marginTop: 5 },
   progress: { height: '100%', backgroundColor: '#4ade80', borderRadius: 20 },
   completedContainer: { paddingHorizontal: 15, paddingBottom: 30 },
-  completedCardsContainer: { justifyContent: 'center', alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  completedCardSmall: { width: 160, height: 80, backgroundColor: '#2a2a2a', borderRadius: 10, padding: 10, justifyContent: 'center', alignItems: 'center', margin: 5 },
-  completedCardText: { color: 'white', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
-  xpTag: { marginTop: 5, backgroundColor: '#800020', paddingVertical: 3, paddingHorizontal: 7, borderRadius: 15 },
-  xpText: { fontWeight: 'bold', fontSize: 14, color: 'white' },
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
