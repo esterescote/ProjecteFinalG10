@@ -134,30 +134,17 @@ const ProfileScreen = () => {
   };
 
   const addFavouriteFilm = async (movie: TMDBMovie) => {
-  if (!profile?.id) return;
-  const currentFilms = profile.favourite_films || [];
-
-  if (currentFilms.find((f: any) => f.id === movie.id)) {
-    return Alert.alert('Duplicate', 'Movie already in favorites');
-  }
-
-  if (currentFilms.length >= 4) {
-    return Alert.alert('Limit reached', 'Maximum 4 favorite movies');
-  }
-
-  const newFilm = {
-    id: movie.id,
-    title: movie.title,
-    poster_path: movie.poster_path,
+    if (!profile?.id) return;
+    const currentFilms = profile.favourite_films || [];
+    if (currentFilms.length >= 4) return Alert.alert('Limit reached', 'Maximum 4 favorite movies');
+    if (currentFilms.includes(movie.title)) return Alert.alert('Duplicate', 'Movie already in favorites');
+    
+    const updatedFilms = [...currentFilms, movie.title];
+    await updateProfile('favourite_films', updatedFilms);
+    setMovieSearchVisible(false);
+    setSearchQuery('');
+    setSearchResults([]);
   };
-
-  const updatedFilms = [...currentFilms, newFilm];
-  await updateProfile('favourite_films', updatedFilms);
-  setMovieSearchVisible(false);
-  setSearchQuery('');
-  setSearchResults([]);
-};
-
 
   const removeFavouriteFilm = async (filmToRemove: string) => {
     if (!profile?.id) return;
@@ -233,6 +220,7 @@ const ProfileScreen = () => {
     </View>
   )}
 </View>
+
 
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
@@ -343,13 +331,6 @@ const styles = StyleSheet.create({
   section: { fontSize: 18, margin: 20, color: 'white' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 20 },
   searchButton: { padding: 8, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 20 },
-  editButton: {
-  padding: 8,
-  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  borderRadius: 20,
-  marginLeft: 8, // opcional, per separar una mica del text
-},
-
   filmItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 6 },
   noItems: { textAlign: 'center', color: 'white', marginBottom: 10 },
   itemText: { color: 'white', flex: 1 },
@@ -424,6 +405,13 @@ const styles = StyleSheet.create({
   closeButton: { marginTop: 15, backgroundColor: '#222', borderRadius: 8, paddingVertical: 10 },
   closeButtonText: { color: 'white', textAlign: 'center', fontWeight: '600' },
   bottomNav: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#2b2323', paddingVertical: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  editButton: {
+  padding: 8,
+  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  borderRadius: 20,
+  marginLeft: 8, // opcional, per separar una mica del text
+},
+
 });
 
 export default ProfileScreen;
