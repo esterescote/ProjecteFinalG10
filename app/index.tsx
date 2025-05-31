@@ -6,6 +6,8 @@ import MyChallengesScreen from '../screens/MyChallengesScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import LoginScreen from '../screens/login';
 import ProfileScreen from '../screens/ProfileScreen';
+import 'react-native-url-polyfill/auto';
+
 
 export type RootStackParamList = {
   Login: undefined;

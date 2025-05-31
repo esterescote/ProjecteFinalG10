@@ -8,7 +8,6 @@
 
     "android": {
       "package": "com.grup10.cinema_challenges_app",
-      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
