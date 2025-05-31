@@ -7,6 +7,7 @@ const Login = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [siginUp, setSignUp] = useState('')
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
 
@@ -38,28 +39,33 @@ const Login = ({ navigation }: any) => {
 
     try {
       // Sintaxi per Supabase v1.x
-      const { user, error } = await supabase.auth.signUp({
+      const { siginUp, error } = await supabase.auth.signUp({
         email,
         password,
       });
+      console.log(siginUp)
+      if (error) {
+        console.error('Signup error:', error.message);
+        return;
+      }
 
+      const user = siginUp.user;
+      const { error: profileError } = await supabase.from('profiles').insert([
+            {
+              id: user.id, // this links to auth.users.id
+              username: username, // or whatever extra fields you have
+            }
+      ]
+      )
+      if (!user) {
+        console.error('No user returned');
+        return;
+      }
       if (error) {
         setError(error.message);
-      } else {
-        // Guardar username al perfil de l'usuari
-        if (user) {
-          try {
-            await supabase.from('profiles').upsert({
-              id: user.id,
-              username,
-            });
-          } catch (profileError) {
-            console.warn('Error saving profile:', profileError);
-          }
-        }
-        
+      } 
         navigation.replace('Home');
-      }
+      
     } catch (err) {
       setError('Registration error. Check your Supabase configuration.');
       console.error('Register error:', err);
