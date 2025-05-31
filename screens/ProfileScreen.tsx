@@ -72,12 +72,22 @@ const ProfileScreen = () => {
   const loadProfile = async () => {
     try {
       setLoading(true);
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) return;
+      
+      // CANVI PRINCIPAL: Utilitzar supabase.auth.user() en lloc de getSession()
+      const user = supabase.auth.user();
+      if (!user) {
+        console.log('No user found');
+        setLoading(false);
+        return;
+      }
 
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles').select('*').eq('id', session.user.id).single();
-      if (profileError) return;
+        .from('profiles').select('*').eq('id', user.id).single();
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+        setLoading(false);
+        return;
+      }
 
       let favouriteFilms = profileData?.favourite_films || [];
       if (typeof favouriteFilms === 'string') {
@@ -86,9 +96,9 @@ const ProfileScreen = () => {
       }
       if (!Array.isArray(favouriteFilms)) favouriteFilms = [];
 
-      setProfile({ ...profileData, email: session.user.email, favourite_films: favouriteFilms });
+      setProfile({ ...profileData, email: user.email, favourite_films: favouriteFilms });
       setUsernameEdit(profileData?.username ?? '');
-      await fetchCurrentChallenges(session.user.id);
+      await fetchCurrentChallenges(user.id);
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
@@ -199,28 +209,27 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.usernameWrapper}>
-  {editingUsername ? (
-    <>
-      <TextInput 
-        value={usernameEdit} 
-        onChangeText={setUsernameEdit} 
-        style={styles.usernameInput} 
-        autoFocus 
-      />
-      <TouchableOpacity onPress={handleSaveUsername}>
-        <Text style={styles.saveButton}>Save</Text>
-      </TouchableOpacity>
-    </>
-  ) : (
-    <View style={styles.usernameRow}>
-      <Text style={styles.username}>{profile?.username ?? 'Anonymous User'}</Text>
-      <TouchableOpacity onPress={() => setEditingUsername(true)} style={styles.editButton}>
-        <Ionicons name="pencil" size={20} color="white" />
-      </TouchableOpacity>
-    </View>
-  )}
-</View>
-
+          {editingUsername ? (
+            <>
+              <TextInput 
+                value={usernameEdit} 
+                onChangeText={setUsernameEdit} 
+                style={styles.usernameInput} 
+                autoFocus 
+              />
+              <TouchableOpacity onPress={handleSaveUsername}>
+                <Text style={styles.saveButton}>Save</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.usernameRow}>
+              <Text style={styles.username}>{profile?.username ?? 'Anonymous User'}</Text>
+              <TouchableOpacity onPress={() => setEditingUsername(true)} style={styles.editButton}>
+                <Ionicons name="pencil" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         <Text style={styles.xp}>XP: {profile?.xp ?? 0}</Text>
 
@@ -406,12 +415,11 @@ const styles = StyleSheet.create({
   closeButtonText: { color: 'white', textAlign: 'center', fontWeight: '600' },
   bottomNav: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#2b2323', paddingVertical: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   editButton: {
-  padding: 8,
-  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  borderRadius: 20,
-  marginLeft: 8, // opcional, per separar una mica del text
-},
-
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    marginLeft: 8, // opcional, per separar una mica del text
+  },
 });
 
 export default ProfileScreen;

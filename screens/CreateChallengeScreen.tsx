@@ -74,9 +74,8 @@ export default function CreateChallengeScreen({ navigation }: any) {
       : 'https://via.placeholder.com/300x450/800020/ffffff?text=Custom+Challenge';
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // CANVI PRINCIPAL: Utilitzar supabase.auth.user() en lloc de getUser()
+      const user = supabase.auth.user();
 
       if (!user) {
         setError('User not authenticated.');

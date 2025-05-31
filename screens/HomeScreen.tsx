@@ -30,29 +30,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      // CANVI PRINCIPAL: Utilitzar supabase.auth.user() en lloc de getUser()
+      const user = supabase.auth.user();
 
-      if (userError) {
-        console.error('Error getting user:', userError.message);
+      if (!user) {
+        console.log('No user found');
+        // Opcional: navegar al login si no hi ha usuari
+        // navigation.replace('Login');
         return;
       }
 
-      if (user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('username, profile_picture')
-          .eq('id', user.id)
-          .single();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username, profile_picture')
+        .eq('id', user.id)
+        .single();
 
-        if (error) {
-          console.error('Error fetching profile:', error.message);
-        } else {
-          setUsername(data.username);
-          setProfilePicture(data.profile_picture);
-        }
+      if (error) {
+        console.error('Error fetching profile:', error.message);
+      } else {
+        setUsername(data.username);
+        setProfilePicture(data.profile_picture);
       }
     };
 

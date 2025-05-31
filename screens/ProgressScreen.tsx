@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ParamListBase } from '@react-navigation/native';
-import { supabase } from '../supabase';
+import { supabase } from '../lib/supabase';
 
 const { width } = Dimensions.get('window');
 type NavigationProp = NativeStackNavigationProp<ParamListBase>;
@@ -30,18 +30,22 @@ export default function ProgressScreen() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
-        console.error('Error al obtener el usuario:', userError);
+      
+      // CANVI PRINCIPAL: Utilitzar supabase.auth.user() en lloc de getUser()
+      const user = supabase.auth.user();
+      if (!user) {
+        console.log('No user found');
         setLoading(false);
+        // Opcional: navegar al login si no hi ha usuari
+        // navigation.replace('Login');
         return;
       }
-      setUser(userData.user);
+      setUser(user);
 
       const { data: userChallenges, error: userChallengesError } = await supabase
         .from('user_challenges')
         .select('*')
-        .eq('user_id', userData.user.id);
+        .eq('user_id', user.id);
 
       if (userChallengesError) {
         console.error('Error al obtener user_challenges:', userChallengesError);
@@ -76,7 +80,7 @@ export default function ProgressScreen() {
         const { count, error: countError } = await supabase
           .from('watched_movies')
           .select('*', { count: 'exact', head: true })
-          .eq('user_id', userData.user.id)
+          .eq('user_id', user.id)
           .eq('challenge_id', challengeId);
 
         counts[challengeId] = countError ? 0 : count || 0;

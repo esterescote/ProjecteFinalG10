@@ -12,14 +12,16 @@ const Login = ({ navigation }: any) => {
 
   const handleLogin = async () => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      // Sintaxi per Supabase v1.x
+      const { user, error } = await supabase.auth.signIn({
+        email,
+        password,
       });
 
       if (error) {
         setError(error.message);
       } else {
+        // user existeix implícitament si no hi ha error
         navigation.replace('Home');
       }
     } catch (err) {
@@ -35,17 +37,27 @@ const Login = ({ navigation }: any) => {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Sintaxi per Supabase v1.x
+      const { user, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { username },
-        },
       });
 
       if (error) {
         setError(error.message);
       } else {
+        // Guardar username al perfil de l'usuari
+        if (user) {
+          try {
+            await supabase.from('profiles').upsert({
+              id: user.id,
+              username,
+            });
+          } catch (profileError) {
+            console.warn('Error saving profile:', profileError);
+          }
+        }
+        
         navigation.replace('Home');
       }
     } catch (err) {

@@ -38,10 +38,14 @@ const MyChallengesScreen: React.FC<MyChallengesScreenProps> = ({ navigation }) =
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.log('Error getting user:', userError);
+      
+      // CANVI PRINCIPAL: Utilitzar supabase.auth.user() en lloc de getUser()
+      const user = supabase.auth.user();
+      if (!user) {
+        console.log('No user found');
         setLoading(false);
+        // Opcional: navegar al login si no hi ha usuari
+        // navigation.replace('Login');
         return;
       }
 

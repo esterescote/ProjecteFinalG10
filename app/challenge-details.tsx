@@ -68,77 +68,80 @@ const ChallengeDetailsScreen: React.FC = () => {
   };
 
   const fetchWatchedMovies = async (challengeId: string) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    // CANVI PRINCIPAL: Utilitzar supabase.auth.user() en lloc de getUser()
+    const user = supabase.auth.user();
 
-  if (!user) return;
-
-  const { data, error } = await supabase
-    .from('watched_movies')
-    .select('tmdb_movie_id')
-    .eq('user_id', user.id)
-    .eq('challenge_id', challengeId);
-
-  if (!error && data) {
-    setWatchedMovies(data.map((entry) => entry.tmdb_movie_id));
-  }
-};
-
-const toggleWatched = async (tmdbMovieId: number) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || !id) return;
-
-  const isWatched = watchedMovies.includes(tmdbMovieId);
-
-  try {
-    if (isWatched) {
-      const { error } = await supabase
-        .from('watched_movies')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('challenge_id', id)
-        .eq('tmdb_movie_id', tmdbMovieId);
-
-      if (error) throw error;
-
-      setWatchedMovies((prev) => prev.filter((mid) => mid !== tmdbMovieId));
-
-      // 🔻 També restem 1 al status del repte
-      await supabase.rpc('decrement_challenge_status', {
-        user_id_input: user.id,
-        challenge_id_input: id,
-      });
-
-    } else {
-      const { error } = await supabase
-        .from('watched_movies')
-        .insert([
-          {
-            user_id: user.id,
-            challenge_id: id,
-            tmdb_movie_id: tmdbMovieId,
-          },
-        ]);
-
-      if (error) throw error;
-
-      setWatchedMovies((prev) => [...prev, tmdbMovieId]);
-
-      // 🔺 Sumem 1 al status del repte
-      await supabase.rpc('increment_challenge_status', {
-        user_id_input: user.id,
-        challenge_id_input: id,
-      });
+    if (!user) {
+      console.log('No user found');
+      return;
     }
-  } catch (error) {
-    console.error('Error toggling watched status:', error);
-  }
-};
 
+    const { data, error } = await supabase
+      .from('watched_movies')
+      .select('tmdb_movie_id')
+      .eq('user_id', user.id)
+      .eq('challenge_id', challengeId);
+
+    if (!error && data) {
+      setWatchedMovies(data.map((entry) => entry.tmdb_movie_id));
+    }
+  };
+
+  const toggleWatched = async (tmdbMovieId: number) => {
+    // CANVI PRINCIPAL: Utilitzar supabase.auth.user() en lloc de getUser()
+    const user = supabase.auth.user();
+
+    if (!user || !id) {
+      console.log('No user found or no challenge id');
+      return;
+    }
+
+    const isWatched = watchedMovies.includes(tmdbMovieId);
+
+    try {
+      if (isWatched) {
+        const { error } = await supabase
+          .from('watched_movies')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('challenge_id', id)
+          .eq('tmdb_movie_id', tmdbMovieId);
+
+        if (error) throw error;
+
+        setWatchedMovies((prev) => prev.filter((mid) => mid !== tmdbMovieId));
+
+        // També restem 1 al status del repte
+        await supabase.rpc('decrement_challenge_status', {
+          user_id_input: user.id,
+          challenge_id_input: id,
+        });
+
+      } else {
+        const { error } = await supabase
+          .from('watched_movies')
+          .insert([
+            {
+              user_id: user.id,
+              challenge_id: id,
+              tmdb_movie_id: tmdbMovieId,
+            },
+          ]);
+
+        if (error) throw error;
+
+        setWatchedMovies((prev) => [...prev, tmdbMovieId]);
+
+        // Sumem 1 al status del repte
+        await supabase.rpc('increment_challenge_status', {
+          user_id_input: user.id,
+          challenge_id_input: id,
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling watched status:', error);
+    }
+  };
 
   const fetchMoviesFromTMDB = async (movieIds: number[]) => {
     setLoadingMovies(true);
@@ -230,34 +233,32 @@ const toggleWatched = async (tmdbMovieId: number) => {
   }
 
   return (
-  <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-    <Text style={styles.title}>{challenge.name}</Text>
-    <Image source={{ uri: challenge.image }} style={styles.image} />
-    <Text style={styles.description}>{challenge.description}</Text>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+      <Text style={styles.title}>{challenge.name}</Text>
+      <Image source={{ uri: challenge.image }} style={styles.image} />
+      <Text style={styles.description}>{challenge.description}</Text>
 
-    <Text style={styles.sectionTitle}>Films to complete this challenge</Text>
+      <Text style={styles.sectionTitle}>Films to complete this challenge</Text>
 
-    {loadingMovies ? (
-      <View style={styles.loadingMoviesContainer}>
-        <ActivityIndicator size="small" color="#888" />
-        <Text style={styles.loadingText}>Loading films...</Text>
-      </View>
-    ) : movies.length > 0 ? (
-      <FlatList
-        data={movies}
-        renderItem={renderMovieItem}
-        keyExtractor={(item) => item.id.toString()}
-        horizontal={false}
-        scrollEnabled={false} 
-        showsVerticalScrollIndicator={false}
-      />
-    ) : (
-      <Text style={styles.noMoviesText}>There's no films available for this</Text>
-    )}
-  </ScrollView>
-
-  
-);
+      {loadingMovies ? (
+        <View style={styles.loadingMoviesContainer}>
+          <ActivityIndicator size="small" color="#888" />
+          <Text style={styles.loadingText}>Loading films...</Text>
+        </View>
+      ) : movies.length > 0 ? (
+        <FlatList
+          data={movies}
+          renderItem={renderMovieItem}
+          keyExtractor={(item) => item.id.toString()}
+          horizontal={false}
+          scrollEnabled={false} 
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <Text style={styles.noMoviesText}>There's no films available for this</Text>
+      )}
+    </ScrollView>
+  );
 };
 
 const styles = StyleSheet.create({
