@@ -6,8 +6,6 @@ const Login = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [siginUp, setSignUp] = useState('')
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
 
@@ -21,10 +19,49 @@ const Login = ({ navigation }: any) => {
 
       if (error) {
         setError(error.message);
-      } else {
-        // user existeix implícitament si no hi ha error
-        navigation.replace('Home');
+        return;
       }
+
+      if (user) {
+        // Comprovar si ja existeix un perfil per aquest usuari
+        const { data: existingProfile, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          // Si hi ha un error diferent de "no trobat"
+          console.error('Error checking profile:', checkError);
+        }
+
+        // Si no existeix el perfil, crear-lo
+        if (!existingProfile) {
+          const defaultUsername = user.email ? user.email.split('@')[0] : 'user_' + user.id.slice(0, 8);
+          
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: user.id,
+                username: defaultUsername,
+                profile_picture: null,
+                header_picture: null,
+                favourite_films: [],
+                xp: 0
+              }
+            ]);
+
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+            // No mostrem error a l'usuari, només ho registrem
+          } else {
+            console.log('Profile created successfully!');
+          }
+        }
+      }
+
+      navigation.replace('Home');
     } catch (err) {
       setError('Connection error. Check your Supabase configuration.');
       console.error('Login error:', err);
@@ -38,33 +75,26 @@ const Login = ({ navigation }: any) => {
     }
 
     try {
-      // Sintaxi per Supabase v1.x
-      const { siginUp, error } = await supabase.auth.signUp({
+      // Registre amb Supabase v1.x
+      const { user, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
-      console.log(siginUp)
-      if (error) {
-        console.error('Signup error:', error.message);
+
+      if (signUpError) {
+        setError(signUpError.message);
+        console.error('Signup error:', signUpError.message);
         return;
       }
 
-      const user = siginUp.user;
-      const { error: profileError } = await supabase.from('profiles').insert([
-            {
-              id: user.id, // this links to auth.users.id
-              username: username, // or whatever extra fields you have
-            }
-      ]
-      )
       if (!user) {
+        setError('No user returned from registration.');
         console.error('No user returned');
         return;
       }
-      if (error) {
-        setError(error.message);
-      } 
-        navigation.replace('Home');
+
+      console.log('User registered successfully!');
+      navigation.replace('Home');
       
     } catch (err) {
       setError('Registration error. Check your Supabase configuration.');
@@ -104,23 +134,14 @@ const Login = ({ navigation }: any) => {
       />
 
       {isRegistering && (
-        <>
-          <TextInput
-            style={styles.input}
-            placeholder="Repeat Password"
-            placeholderTextColor="#ccc"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            placeholderTextColor="#ccc"
-            value={username}
-            onChangeText={setUsername}
-          />
-        </>
+        <TextInput
+          style={styles.input}
+          placeholder="Repeat Password"
+          placeholderTextColor="#ccc"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+        />
       )}
 
       <TouchableOpacity style={styles.button} onPress={isRegistering ? handleRegister : handleLogin}>
