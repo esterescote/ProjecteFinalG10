@@ -48,8 +48,14 @@ const NewChallengesScreen: React.FC = () => {
   }, []);
 
   const loadUserAndChallenges = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) return;
+    // CANVI PRINCIPAL: Utilitzar supabase.auth.user() en lloc de getUser()
+    const user = supabase.auth.user();
+    
+    if (!user) {
+      console.log('No user found');
+      return;
+    }
+    
     setUserId(user.id);
     fetchChallenges(user.id);
   };
