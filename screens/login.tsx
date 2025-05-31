@@ -11,36 +11,46 @@ const Login = ({ navigation }: any) => {
   const [isRegistering, setIsRegistering] = useState(false);
 
   const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithPassword({
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
-    });
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      navigation.replace('Home');
+      if (error) {
+        setError(error.message);
+      } else {
+        navigation.replace('Home');
+      }
+    } catch (err) {
+      setError('Connection error. Check your Supabase configuration.');
+      console.error('Login error:', err);
     }
   };
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
-      setError('Les contrasenyes no coincideixen.');
+      setError('Passwords do not match.');
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username },
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username },
+        },
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      navigation.replace('Home');
+      if (error) {
+        setError(error.message);
+      } else {
+        navigation.replace('Home');
+      }
+    } catch (err) {
+      setError('Registration error. Check your Supabase configuration.');
+      console.error('Register error:', err);
     }
   };
 
@@ -64,6 +74,7 @@ const Login = ({ navigation }: any) => {
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
+        autoCapitalize="none"
       />
       <TextInput
         style={styles.input}
@@ -116,7 +127,7 @@ const Login = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#3a2f2f', // fons marró fosc
+    backgroundColor: '#3a2f2f',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,

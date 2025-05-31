@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Cinema Challenges",
-    "slug": "filmquestproject",
+    "slug": "cinema-challenges-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,10 +10,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      }
     },
     "ios": {
       "supportsTablet": true
@@ -44,9 +41,8 @@
         "origin": false
       },
       "eas": {
-        "projectId": "39edaf6d-7d19-47bd-9e8b-f82043c2cda2"
+        "projectId": "4821daf5-16db-474a-b668-cdd7f3ed4953"
       }
-    },
-    "owner": "prograg10"
+    }
   }
 }
