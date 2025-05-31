@@ -169,25 +169,59 @@ const ProfileScreen = () => {
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="white" /></View>;
 
-  const renderModal = (visible: boolean, onClose: () => void, data: any[], onSelect: (uri: string) => void, isAvatar = false) => (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+  // Avatar Modal
+  const renderAvatarModal = () => (
+    <Modal visible={avatarModalVisible} transparent animationType="fade" onRequestClose={() => setAvatarModalVisible(false)}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <FlatList
-            key={isAvatar ? 'avatar-grid' : 'header-grid'}
-            data={data}
-            keyExtractor={(item) => item.id}
-            numColumns={isAvatar ? 5 : 2}
-            contentContainerStyle={isAvatar ? styles.avatarGrid : styles.headerGrid}
-            columnWrapperStyle={isAvatar ? styles.avatarRow : styles.headerRow}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={isAvatar ? styles.avatarOptionItem : styles.headerOptionItem} onPress={() => { onSelect(item.uri); onClose(); }}>
-                <Image source={{ uri: item.uri }} style={isAvatar ? styles.avatarOption : styles.headerOption} />
+          <Text style={styles.modalTitle}>Choose Avatar</Text>
+          <View style={styles.avatarContainer}>
+            {avatarOptions.map((item) => (
+              <TouchableOpacity 
+                key={item.id}
+                style={styles.avatarOptionItem} 
+                onPress={() => { 
+                  updateProfile('profile_picture', item.uri); 
+                  setAvatarModalVisible(false); 
+                }}
+              >
+                <Image source={{ uri: item.uri }} style={styles.avatarOption} />
                 <Text style={styles.optionText}>{item.name}</Text>
               </TouchableOpacity>
-            )}
-          />
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            ))}
+          </View>
+          <TouchableOpacity style={styles.closeButton} onPress={() => setAvatarModalVisible(false)}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Header Modal
+  const renderHeaderModal = () => (
+    <Modal visible={headerModalVisible} transparent animationType="fade" onRequestClose={() => setHeaderModalVisible(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Choose Header</Text>
+          <ScrollView style={styles.headerScrollView} showsVerticalScrollIndicator={false}>
+            <View style={styles.headerContainer}>
+              {headerOptions.map((item) => (
+                <TouchableOpacity 
+                  key={item.id}
+                  style={styles.headerOptionItem} 
+                  onPress={() => { 
+                    updateProfile('header_picture', item.uri); 
+                    setHeaderModalVisible(false); 
+                  }}
+                >
+                  <Image source={{ uri: item.uri }} style={styles.headerOption} />
+                  <Text style={styles.optionText}>{item.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+          <TouchableOpacity style={styles.closeButton} onPress={() => setHeaderModalVisible(false)}>
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
@@ -300,10 +334,8 @@ const ProfileScreen = () => {
           </View>
         </Modal>
 
-        {renderModal(avatarModalVisible, () => setAvatarModalVisible(false), avatarOptions, 
-          (uri) => updateProfile('profile_picture', uri), true)}
-        {renderModal(headerModalVisible, () => setHeaderModalVisible(false), headerOptions, 
-          (uri) => updateProfile('header_picture', uri))}
+        {renderAvatarModal()}
+        {renderHeaderModal()}
       </ScrollView>
 
       {/* Bottom Navigation */}
@@ -349,27 +381,42 @@ const styles = StyleSheet.create({
   challengeImage: { width: '100%', height: '100%', borderRadius: 12, position: 'absolute' },
   challengeOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', paddingVertical: 12, paddingHorizontal: 10, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
   challengeName: { color: 'white', textAlign: 'center', fontSize: 14, fontWeight: '600' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', paddingHorizontal: 20 },
-  modalContent: { backgroundColor: '#4a3d3d', borderRadius: 10, maxHeight: '80%', padding: 15 },
-  searchModalContent: { backgroundColor: '#4a3d3d', borderRadius: 10, maxHeight: '90%', padding: 15, marginTop: 50 },
-  searchHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  searchTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-  searchInput: { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 8, padding: 12, color: 'white', fontSize: 16, marginBottom: 15 },
-  searchLoader: { marginTop: 50 },
-  movieItem: { flexDirection: 'row', padding: 10, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 8, marginBottom: 10 },
-  moviePoster: { width: 60, height: 90, borderRadius: 4, marginRight: 12 },
-  movieInfo: { flex: 1, justifyContent: 'flex-start' },
-  movieTitle: { color: 'white', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  movieYear: { color: '#ccc', fontSize: 14, marginBottom: 6 },
-  movieOverview: { color: '#aaa', fontSize: 12, lineHeight: 16 },
-  optionItem: { alignItems: 'center', marginBottom: 10 },
-  avatarGrid: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10 },
-  avatarRow: { justifyContent: 'space-evenly', marginBottom: 15 },
+  
+  // Modal styles
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.8)', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    paddingHorizontal: 20 
+  },
+  modalContent: { 
+    backgroundColor: '#4a3d3d', 
+    borderRadius: 15, 
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '85%',
+  },
+  modalTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  
+  // Avatar modal styles
+  avatarContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
   avatarOptionItem: { 
     alignItems: 'center', 
-    marginBottom: 15,
-    flex: 1,
-    maxWidth: '20%',
+    margin: 8,
+    width: 70,
   },
   avatarOption: { 
     width: 60, 
@@ -377,48 +424,131 @@ const styles = StyleSheet.create({
     borderRadius: 30, 
     borderColor: 'white', 
     borderWidth: 2,
-    marginBottom: 5,
+    marginBottom: 8,
   },
-  // New header-specific styles for centering and proper spacing
-  headerGrid: { 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    paddingHorizontal: 10,
+  
+  // Header modal styles
+  headerScrollView: {
+    maxHeight: 400,
   },
-  headerRow: { 
-    justifyContent: 'space-around', 
-    marginBottom: 15,
+  headerContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
   },
   headerOptionItem: { 
     alignItems: 'center', 
-    marginBottom: 15,
-    flex: 1,
-    marginHorizontal: 10,
+    marginBottom: 20,
+    width: '47%', // Dos columnes amb una mica d'espai
   },
   headerOption: { 
-    width: 150, 
+    width: '100%',
     height: 80, 
     borderRadius: 12, 
     borderColor: 'white', 
     borderWidth: 1, 
     marginBottom: 8,
+    resizeMode: 'cover',
   },
   optionText: { 
     color: 'white', 
-    fontSize: 13, // Increased from 10 to 13
+    fontSize: 12,
     textAlign: 'center',
     paddingHorizontal: 4,
-    lineHeight: 16, // Increased line height for better readability
-    fontWeight: '500', // Added font weight for better visibility
+    lineHeight: 16,
+    fontWeight: '500',
   },
-  closeButton: { marginTop: 15, backgroundColor: '#222', borderRadius: 8, paddingVertical: 10 },
-  closeButtonText: { color: 'white', textAlign: 'center', fontWeight: '600' },
-  bottomNav: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#2b2323', paddingVertical: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  closeButton: { 
+    marginTop: 20, 
+    backgroundColor: '#666', 
+    borderRadius: 10, 
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  closeButtonText: { 
+    color: 'white', 
+    textAlign: 'center', 
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  
+  // Search modal styles
+  searchModalContent: { 
+    backgroundColor: '#4a3d3d', 
+    borderRadius: 10, 
+    maxHeight: '90%', 
+    padding: 15, 
+    marginTop: 50 
+  },
+  searchHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 15 
+  },
+  searchTitle: { 
+    color: 'white', 
+    fontSize: 18, 
+    fontWeight: 'bold' 
+  },
+  searchInput: { 
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+    borderRadius: 8, 
+    padding: 12, 
+    color: 'white', 
+    fontSize: 16, 
+    marginBottom: 15 
+  },
+  searchLoader: { marginTop: 50 },
+  movieItem: { 
+    flexDirection: 'row', 
+    padding: 10, 
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+    borderRadius: 8, 
+    marginBottom: 10 
+  },
+  moviePoster: { 
+    width: 60, 
+    height: 90, 
+    borderRadius: 4, 
+    marginRight: 12 
+  },
+  movieInfo: { 
+    flex: 1, 
+    justifyContent: 'flex-start' 
+  },
+  movieTitle: { 
+    color: 'white', 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    marginBottom: 4 
+  },
+  movieYear: { 
+    color: '#ccc', 
+    fontSize: 14, 
+    marginBottom: 6 
+  },
+  movieOverview: { 
+    color: '#aaa', 
+    fontSize: 12, 
+    lineHeight: 16 
+  },
+  
+  bottomNav: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    alignItems: 'center', 
+    backgroundColor: '#2b2323', 
+    paddingVertical: 12, 
+    borderTopLeftRadius: 20, 
+    borderTopRightRadius: 20 
+  },
   editButton: {
     padding: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
-    marginLeft: 8, // opcional, per separar una mica del text
+    marginLeft: 8,
   },
 });
 
