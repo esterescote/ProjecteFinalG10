@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FilmQuest",
-    "slug": "film-quest-app",
+    "slug": "cinema-challenges-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icono.png",
