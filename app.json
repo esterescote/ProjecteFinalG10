@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Cinema Challenges",
-    "slug": "cinema-challenges-app",
+    "name": "FilmQuest",
+    "slug": "film-quest-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icono.png",
     "android": {
       "package": "com.grup10.cinema_challenges_app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/icono.png",
         "backgroundColor": "#ffffff"
       }
     },
